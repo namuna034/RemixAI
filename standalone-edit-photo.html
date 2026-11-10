@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Photo - AI Background Remover, Style Transfer & 4K Upscaler</title>
+  <meta name="description" content="A complete, client-side pink-themed photo editor with background removal, artistic style transfer, live CSS filters, and 4K upscaling." />
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pink: {
+              50: '#fdf2f8',
+              100: '#fce7f3',
+              200: '#fbcfe8',
+              300: '#f9a8d4',
+              400: '#f472b6',
+              500: '#ec4899',
+              600: '#db2777',
+              700: '#be185d',
+              800: '#9d174d',
+              900: '#831843',
+              950: '#500724',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: #fff5f7;
+    }
+    .checkerboard-bg {
+      background-color: #ffffff;
+      background-image:
+        linear-gradient(45deg, #fce7f3 25%, transparent 25%),
+        linear-gradient(-45deg, #fce7f3 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #fce7f3 75%),
+        linear-gradient(-45deg, transparent 75%, #fce7f3 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+    input[type=range] {
+      accent-color: #ec4899;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #fdf2f8;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #f472b6;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-pink-950 flex flex-col selection:bg-pink-300 selection:text-pink-950">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92%] transition-all pointer-events-none"></div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-pink-200 shadow-xs">
+    <div class="max-w-6xl mx-auto px-4 py-3 sm:py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white shadow-md shadow-pink-200">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-pink-600 via-rose-600 to-pink-500 bg-clip-text text-transparent">
+              Edit Photo
+            </h1>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 uppercase tracking-wider flex items-center gap-1">
+              ⚡ Free & Instant
+            </span>
+          </div>
+          <p class="text-[11px] text-pink-600 font-medium hidden sm:block">
+            Background Remover, Artistic Styles, Live CSS Filters & 4K Upscaler (Zero API Keys Needed)
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="btn-reset-all" type="button" class="hidden px-3 py-1.5 text-xs font-semibold text-pink-700 hover:text-pink-900 bg-pink-50 hover:bg-pink-100 rounded-xl border border-pink-200 transition-all flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Reset Photo</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- Zero Keys Info Banner -->
+    <div class="w-full bg-gradient-to-r from-pink-500/10 via-rose-500/5 to-pink-500/10 backdrop-blur-md border border-pink-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center shadow-md shadow-pink-200 shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm sm:text-base font-extrabold text-pink-950">
+              Ready to Edit — Zero API Keys Required
+            </h2>
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Active
+            </span>
+          </div>
+          <p class="text-xs text-pink-700 mt-0.5">
+            All background removal, live CSS filters, artistic styles, and resolution scaling up to 4K run directly in your browser.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 self-stretch sm:self-auto justify-end text-[11px] font-bold text-pink-700 bg-white/80 px-3 py-1.5 rounded-xl border border-pink-200 shadow-xs">
+        <span>144p • 480p • 720p • 1080p • 4K</span>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- Left Column: Controls (Upload, Tools, Upscaler) -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- 1. UPLOADER SECTION -->
+        <div class="space-y-4">
+          <input id="file-input" type="file" accept="image/*" class="hidden" />
+
+          <!-- Drop Box -->
+          <div id="drop-zone" class="border-2 border-dashed rounded-2xl p-6 md:p-8 text-center cursor-pointer transition-all duration-200 border-pink-300 hover:border-pink-400 bg-white/70 hover:bg-pink-50/50 shadow-sm shadow-pink-100">
+            <div class="flex flex-col items-center justify-center space-y-3">
+              <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center shadow-md shadow-pink-300">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              </div>
+              <div>
+                <h3 id="upload-box-title" class="text-base font-bold text-pink-950">
+                  Upload a Photo from Device
+                </h3>
+                <p class="text-xs text-pink-600 mt-1">
+                  Click to browse files or drag and drop your photo here (JPG, PNG, WebP)
+                </p>
+              </div>
+              <button id="btn-select-file" type="button" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold text-sm rounded-xl shadow-md shadow-pink-200 transition-all active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span>Select Photo</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Samples -->
+          <div class="bg-white/60 backdrop-blur-sm border border-pink-100 rounded-xl p-3.5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-pink-900 flex items-center gap-1.5">
+                ✨ Or try with a sample photo:
+              </span>
+              <span class="text-[11px] text-pink-500">Instant test</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2.5">
+              <button type="button" onclick="loadSample('flower')" class="flex flex-col items-start text-left p-1.5 bg-pink-50/60 hover:bg-pink-100/80 border border-pink-200 rounded-xl transition-all group overflow-hidden">
+                <div class="w-full aspect-square rounded-lg overflow-hidden bg-pink-100 mb-1.5 flex items-center justify-center text-2xl">
+                  🌸
+                </div>
+                <span class="text-xs font-bold text-pink-950 truncate w-full">Cherry Blossom</span>
+                <span class="text-[10px] text-pink-600 truncate w-full">Vibrant petals</span>
+              </button>
+              <button type="button" onclick="loadSample('portrait')" class="flex flex-col items-start text-left p-1.5 bg-pink-50/60 hover:bg-pink-100/80 border border-pink-200 rounded-xl transition-all group overflow-hidden">
+                <div class="w-full aspect-square rounded-lg overflow-hidden bg-pink-100 mb-1.5 flex items-center justify-center text-2xl">
+                  👤
+                </div>
+                <span class="text-xs font-bold text-pink-950 truncate w-full">Portrait Study</span>
+                <span class="text-[10px] text-pink-600 truncate w-full">Clean contrast</span>
+              </button>
+              <button type="button" onclick="loadSample('sunset')" class="flex flex-col items-start text-left p-1.5 bg-pink-50/60 hover:bg-pink-100/80 border border-pink-200 rounded-xl transition-all group overflow-hidden">
+                <div class="w-full aspect-square rounded-lg overflow-hidden bg-pink-100 mb-1.5 flex items-center justify-center text-2xl">
+                  🌅
+                </div>
+                <span class="text-xs font-bold text-pink-950 truncate w-full">Sunset Horizon</span>
+                <span class="text-[10px] text-pink-600 truncate w-full">Rich warm gradient</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. EDITING TOOLS (Filters, Remove BG, Style) -->
+        <div class="w-full bg-white/90 backdrop-blur-md border border-pink-200 rounded-2xl shadow-sm shadow-pink-100 overflow-hidden">
+          <!-- Pink Navigation Tabs -->
+          <div class="flex border-b border-pink-100 bg-pink-50/50 p-1.5 gap-1">
+            <button id="tab-btn-filter" type="button" onclick="switchTab('filter')" class="flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 bg-white text-pink-600 shadow-sm border border-pink-200">
+              <svg class="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              <span>Filters</span>
+              <span id="tab-filter-indicator" class="hidden w-2 h-2 rounded-full bg-pink-500 animate-pulse"></span>
+            </button>
+            <button id="tab-btn-remove-bg" type="button" onclick="switchTab('remove-bg')" class="flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 text-pink-900/70 hover:text-pink-900 hover:bg-pink-100/50">
+              <svg class="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879a3 3 0 11-4.242-4.242L12 12m0 0l-2.879-2.879a3 3 0 114.242-4.242L12 12" />
+              </svg>
+              <span>Remove BG</span>
+            </button>
+            <button id="tab-btn-style" type="button" onclick="switchTab('style')" class="flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 text-pink-900/70 hover:text-pink-900 hover:bg-pink-100/50">
+              <svg class="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+              <span>Style</span>
+            </button>
+          </div>
+
+          <div class="p-4 md:p-6 space-y-5">
+
+            <!-- TAB 1: CSS FILTERS -->
+            <div id="tab-content-filter" class="space-y-4">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <h3 class="text-base font-bold text-pink-950 flex items-center gap-2">
+                    Live Visual Filters
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">Real-time CSS</span>
+                  </h3>
+                  <p class="text-xs text-pink-600 mt-0.5">
+                    Adjust grayscale, sepia, invert, and brightness with instantaneous preview.
+                  </p>
+                </div>
+                <button id="btn-reset-filters" type="button" onclick="resetFilters()" class="hidden px-2.5 py-1 text-xs font-semibold text-pink-700 bg-pink-100 hover:bg-pink-200 rounded-lg border border-pink-200 transition-all flex items-center gap-1">
+                  <span>Reset</span>
+                </button>
+              </div>
+
+              <!-- Presets -->
+              <div class="space-y-1.5">
+                <span class="text-[11px] font-semibold text-pink-700">Quick Filter Presets:</span>
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" onclick="applyPreset(0,0,0,100)" class="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-pink-50 hover:bg-pink-100 text-pink-800 border-pink-200">Normal</button>
+                  <button type="button" onclick="applyPreset(100,0,0,105)" class="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-pink-50 hover:bg-pink-100 text-pink-800 border-pink-200">B&W Classic</button>
+                  <button type="button" onclick="applyPreset(0,85,0,105)" class="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-pink-50 hover:bg-pink-100 text-pink-800 border-pink-200">Warm Sepia</button>
+                  <button type="button" onclick="applyPreset(0,0,100,100)" class="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-pink-50 hover:bg-pink-100 text-pink-800 border-pink-200">Inverted Negative</button>
+                  <button type="button" onclick="applyPreset(0,15,0,135)" class="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-pink-50 hover:bg-pink-100 text-pink-800 border-pink-200">Bright & Airy</button>
+                  <button type="button" onclick="applyPreset(80,25,0,80)" class="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-pink-50 hover:bg-pink-100 text-pink-800 border-pink-200">Moody Noir</button>
+                </div>
+              </div>
+
+              <!-- Sliders Container -->
+              <div class="space-y-3.5 p-3.5 bg-pink-50/60 rounded-2xl border border-pink-200 text-xs text-pink-900">
+                <!-- Grayscale -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between">
+                    <label class="font-bold text-pink-950 flex items-center gap-1.5">
+                      <span>Grayscale</span>
+                      <span class="text-[10px] font-normal text-pink-500">(Black & White)</span>
+                    </label>
+                    <span id="badge-grayscale" class="font-mono text-pink-700 font-bold bg-white px-2 py-0.5 rounded border border-pink-200 text-[11px]">0%</span>
+                  </div>
+                  <input id="slider-grayscale" type="range" min="0" max="100" value="0" oninput="onFilterSliderChange()" class="w-full" />
+                </div>
+
+                <!-- Sepia -->
+                <div class="space-y-1 pt-1 border-t border-pink-100">
+                  <div class="flex items-center justify-between">
+                    <label class="font-bold text-pink-950 flex items-center gap-1.5">
+                      <span>Sepia</span>
+                      <span class="text-[10px] font-normal text-pink-500">(Warm Vintage Tone)</span>
+                    </label>
+                    <span id="badge-sepia" class="font-mono text-pink-700 font-bold bg-white px-2 py-0.5 rounded border border-pink-200 text-[11px]">0%</span>
+                  </div>
+                  <input id="slider-sepia" type="range" min="0" max="100" value="0" oninput="onFilterSliderChange()" class="w-full" />
+                </div>
+
+                <!-- Invert -->
+                <div class="space-y-1 pt-1 border-t border-pink-100">
+                  <div class="flex items-center justify-between">
+                    <label class="font-bold text-pink-950 flex items-center gap-1.5">
+                      <span>Invert</span>
+                      <span class="text-[10px] font-normal text-pink-500">(Negative Colors)</span>
+                    </label>
+                    <span id="badge-invert" class="font-mono text-pink-700 font-bold bg-white px-2 py-0.5 rounded border border-pink-200 text-[11px]">0%</span>
+                  </div>
+                  <input id="slider-invert" type="range" min="0" max="100" value="0" oninput="onFilterSliderChange()" class="w-full" />
+                </div>
+
+                <!-- Brightness -->
+                <div class="space-y-1 pt-1 border-t border-pink-100">
+                  <div class="flex items-center justify-between">
+                    <label class="font-bold text-pink-950 flex items-center gap-1.5">
+                      <span>Brightness</span>
+                    </label>
+                    <span id="badge-brightness" class="font-mono text-pink-700 font-bold bg-white px-2 py-0.5 rounded border border-pink-200 text-[11px]">100%</span>
+                  </div>
+                  <input id="slider-brightness" type="range" min="0" max="200" value="100" oninput="onFilterSliderChange()" class="w-full" />
+                </div>
+              </div>
+
+              <!-- Save Filter as New Version -->
+              <button id="btn-bake-filter" type="button" onclick="bakeFilterToVersion()" class="hidden w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white shadow-md shadow-pink-200 active:scale-[0.99] transition-all">
+                <span>Save Filtered Image as New Version</span>
+              </button>
+            </div>
+
+            <!-- TAB 2: REMOVE BACKGROUND -->
+            <div id="tab-content-remove-bg" class="hidden space-y-4">
+              <div>
+                <h3 class="text-base font-bold text-pink-950 flex items-center gap-2">
+                  Cutout & Background Removal
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">Zero Keys</span>
+                </h3>
+                <p class="text-xs text-pink-600 mt-0.5">
+                  Isolates your subject and generates a crisp transparent cutout in real-time.
+                </p>
+              </div>
+
+              <div class="space-y-3 p-3 bg-pink-50/60 rounded-xl border border-pink-200 text-xs text-pink-900">
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-pink-950">Cutout Sensitivity:</span>
+                  <span id="badge-tolerance" class="font-mono text-pink-700 font-bold bg-white px-2 py-0.5 rounded border border-pink-200">38</span>
+                </div>
+                <input id="slider-tolerance" type="range" min="15" max="80" value="38" oninput="document.getElementById('badge-tolerance').innerText = this.value" class="w-full" />
+                <div class="flex justify-between text-[10px] text-pink-500">
+                  <span>Preserve Details (Low)</span>
+                  <span>Default (38)</span>
+                  <span>Remove More (High)</span>
+                </div>
+              </div>
+
+              <button id="btn-remove-bg" type="button" onclick="handleRemoveBg()" class="w-full py-3.5 px-6 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-600 text-white shadow-md shadow-pink-200 active:scale-[0.99] transition-all">
+                <span>Remove Background</span>
+              </button>
+            </div>
+
+            <!-- TAB 3: STYLE TRANSFER -->
+            <div id="tab-content-style" class="hidden space-y-4">
+              <div>
+                <h3 class="text-base font-bold text-pink-950 flex items-center gap-2">
+                  Artistic Style Transfer
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">Client-Side AI</span>
+                </h3>
+                <p class="text-xs text-pink-600 mt-0.5">
+                  Re-imagines and transforms your photo into painterly art styles.
+                </p>
+              </div>
+
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-pink-900">Choose or Type Style:</label>
+                <input id="style-prompt-input" type="text" value="Anime style, vibrant colors" placeholder="e.g., cartoon, oil painting, anime, cyberpunk, watercolor..." class="w-full px-3.5 py-3 bg-pink-50/60 border border-pink-200 rounded-xl text-xs sm:text-sm text-pink-950 focus:outline-none focus:ring-2 focus:ring-pink-400 font-medium" />
+              </div>
+
+              <div class="space-y-1.5">
+                <span class="text-[11px] font-semibold text-pink-700">Quick Styles:</span>
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" onclick="setStyle('Anime')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-pink-50 text-pink-800 border border-pink-200 hover:bg-pink-100">Anime</button>
+                  <button type="button" onclick="setStyle('Oil Painting')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-pink-50 text-pink-800 border border-pink-200 hover:bg-pink-100">Oil Painting</button>
+                  <button type="button" onclick="setStyle('3D Cartoon')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-pink-50 text-pink-800 border border-pink-200 hover:bg-pink-100">3D Cartoon</button>
+                  <button type="button" onclick="setStyle('Cyberpunk')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-pink-50 text-pink-800 border border-pink-200 hover:bg-pink-100">Cyberpunk</button>
+                  <button type="button" onclick="setStyle('Watercolor')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-pink-50 text-pink-800 border border-pink-200 hover:bg-pink-100">Watercolor</button>
+                  <button type="button" onclick="setStyle('Pencil Sketch')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-pink-50 text-pink-800 border border-pink-200 hover:bg-pink-100">Pencil Sketch</button>
+                  <button type="button" onclick="setStyle('Pop Art')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-pink-50 text-pink-800 border border-pink-200 hover:bg-pink-100">Pop Art</button>
+                </div>
+              </div>
+
+              <button id="btn-apply-style" type="button" onclick="handleApplyStyle()" class="w-full py-3.5 px-6 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-600 text-white shadow-md shadow-pink-200 active:scale-[0.99] transition-all">
+                <span>Apply Style</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. RESOLUTION / QUALITY SELECTOR & UPSCALER -->
+        <div class="w-full bg-white/90 backdrop-blur-md border border-pink-200 rounded-2xl shadow-sm shadow-pink-100 p-4 md:p-6 space-y-4">
+          <div class="pb-3 border-b border-pink-100">
+            <h3 class="text-base font-bold text-pink-950 flex items-center gap-2">
+              Resolution & Quality Selector
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-100 text-pink-700">144p to 4K</span>
+            </h3>
+            <p class="text-xs text-pink-600 mt-0.5">
+              Upscale your photo with high-fidelity resampling and multi-pass unsharp masking.
+            </p>
+          </div>
+
+          <!-- Resolution Pills -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <button type="button" onclick="selectRes('144p')" class="res-btn p-2.5 rounded-xl border text-left transition-all border-pink-200 bg-pink-50/50 hover:bg-pink-100" data-res="144p">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-pink-950">144p</span>
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-pink-100 text-pink-700">Tiny</span>
+              </div>
+              <p class="text-[10px] text-pink-600 mt-0.5">256 × 144</p>
+            </button>
+            <button type="button" onclick="selectRes('480p')" class="res-btn p-2.5 rounded-xl border text-left transition-all border-pink-200 bg-pink-50/50 hover:bg-pink-100" data-res="480p">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-pink-950">480p</span>
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-pink-100 text-pink-700">SD</span>
+              </div>
+              <p class="text-[10px] text-pink-600 mt-0.5">854 × 480</p>
+            </button>
+            <button type="button" onclick="selectRes('720p')" class="res-btn p-2.5 rounded-xl border text-left transition-all border-pink-200 bg-pink-50/50 hover:bg-pink-100" data-res="720p">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-pink-950">720p</span>
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-pink-100 text-pink-700">HD</span>
+              </div>
+              <p class="text-[10px] text-pink-600 mt-0.5">1280 × 720</p>
+            </button>
+            <button type="button" onclick="selectRes('1080p')" class="res-btn p-2.5 rounded-xl border text-left transition-all border-pink-500 bg-pink-500 text-white shadow-sm ring-2 ring-pink-400" data-res="1080p">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-white">1080p</span>
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-white text-pink-700 font-bold">FHD</span>
+              </div>
+              <p class="text-[10px] text-pink-100 mt-0.5">1920 × 1080</p>
+            </button>
+            <button type="button" onclick="selectRes('4K')" class="res-btn col-span-2 sm:col-span-1 p-2.5 rounded-xl border text-left transition-all border-pink-200 bg-pink-50/50 hover:bg-pink-100" data-res="4K">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-pink-950">4K Ultra HD</span>
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-gradient-to-r from-amber-200 to-rose-200 text-pink-950 font-bold">UHD</span>
+              </div>
+              <p class="text-[10px] text-pink-600 mt-0.5">3840 × 2160</p>
+            </button>
+          </div>
+
+          <button id="btn-upscale" type="button" onclick="handleUpscale()" class="w-full py-3.5 px-6 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-600 text-white shadow-md shadow-pink-200 active:scale-[0.99] transition-all">
+            <span>Upscale Image</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Preview Stage & Download -->
+      <div class="lg:col-span-7 space-y-4">
+
+        <!-- Version History List -->
+        <div id="version-history-box" class="hidden w-full bg-white/80 backdrop-blur-sm border border-pink-200 rounded-2xl p-3 md:p-4 shadow-sm shadow-pink-100">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-pink-900 flex items-center gap-1.5 uppercase tracking-wider">
+              📚 Edit History
+            </span>
+            <span class="text-[11px] text-pink-500">Click to switch</span>
+          </div>
+          <div id="version-history-list" class="flex items-center gap-2.5 overflow-x-auto pb-1 custom-scrollbar"></div>
+        </div>
+
+        <!-- Main Preview Box -->
+        <div class="w-full bg-white rounded-2xl border border-pink-200 shadow-md shadow-pink-100 overflow-hidden flex flex-col">
+          <!-- Preview Header -->
+          <div class="flex flex-wrap items-center justify-between gap-2 p-3 bg-gradient-to-r from-pink-50 to-rose-50 border-b border-pink-100">
+            <div class="flex items-center gap-2">
+              <span id="preview-active-label" class="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-pink-100 text-pink-700">
+                Preview
+              </span>
+              <span id="preview-res-badge" class="hidden text-[11px] font-extrabold text-white bg-gradient-to-r from-pink-500 to-rose-500 px-2.5 py-0.5 rounded-md shadow-xs">
+                1080p
+              </span>
+              <span id="preview-dim-badge" class="hidden text-[11px] font-mono font-semibold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-md border border-pink-200"></span>
+              <span id="preview-filter-badge" class="hidden text-[11px] font-semibold text-pink-700 bg-pink-100 px-2.5 py-0.5 rounded-md border border-pink-200">
+                Filtered
+              </span>
+            </div>
+
+            <!-- View Mode Toggles (Single, Split Slider, Side-by-Side) -->
+            <div id="view-mode-bar" class="hidden flex items-center gap-1 bg-white p-1 rounded-xl border border-pink-200 text-xs">
+              <button id="btn-mode-single" type="button" onclick="setViewMode('single')" class="px-2.5 py-1 rounded-lg font-medium transition-all bg-pink-500 text-white">Current</button>
+              <button id="btn-mode-split" type="button" onclick="setViewMode('split')" class="px-2.5 py-1 rounded-lg font-medium transition-all text-pink-700 hover:bg-pink-50">Compare Slider</button>
+              <button id="btn-mode-compare" type="button" onclick="setViewMode('compare')" class="px-2.5 py-1 rounded-lg font-medium transition-all text-pink-700 hover:bg-pink-50">Side-by-Side</button>
+            </div>
+
+            <!-- Backdrop Picker -->
+            <div class="flex items-center gap-1.5 text-xs text-pink-700">
+              <span class="text-[11px] font-medium hidden sm:inline">Backdrop:</span>
+              <button type="button" title="Checkerboard" onclick="setBackdrop('checker')" class="w-6 h-6 rounded-md border checkerboard-bg border-pink-400"></button>
+              <button type="button" title="White" onclick="setBackdrop('white')" class="w-6 h-6 rounded-md border bg-white border-pink-300"></button>
+              <button type="button" title="Soft Pink" onclick="setBackdrop('soft-pink')" class="w-6 h-6 rounded-md border bg-[#ffd6e0] border-pink-300"></button>
+              <button type="button" title="Vibrant Pink" onclick="setBackdrop('vibrant-pink')" class="w-6 h-6 rounded-md border bg-[#ec4899] border-pink-300"></button>
+            </div>
+          </div>
+
+          <!-- Stage Display Area -->
+          <div id="stage-container" class="relative w-full overflow-hidden flex items-center justify-center min-h-[340px] max-h-[580px] checkerboard-bg select-none">
+            <!-- Empty Placeholder -->
+            <div id="stage-empty" class="w-full aspect-[4/3] max-h-[500px] flex flex-col items-center justify-center p-8 text-pink-400 text-center">
+              <div class="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center text-pink-400 mb-3 text-2xl">
+                📷
+              </div>
+              <p class="text-sm font-semibold text-pink-800">No Photo Selected</p>
+              <p class="text-xs text-pink-500 mt-1 max-w-xs">
+                Upload a photo or choose a sample to start editing and styling.
+              </p>
+            </div>
+
+            <!-- Mode 1: Single Image -->
+            <div id="stage-single" class="hidden w-full h-full min-h-[340px] max-h-[580px] flex items-center justify-center p-4">
+              <img id="img-single" src="" alt="Preview" class="max-h-[520px] max-w-full object-contain rounded-lg shadow-sm transition-all duration-100" />
+            </div>
+
+            <!-- Mode 2: Interactive Split Slider -->
+            <div id="stage-split" class="hidden relative w-full h-[450px] cursor-ew-resize overflow-hidden flex items-center justify-center">
+              <!-- Background: Original -->
+              <div class="absolute inset-0 flex items-center justify-center p-4">
+                <img id="img-split-orig" src="" alt="Original" class="max-h-full max-w-full object-contain pointer-events-none" />
+                <span class="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-md">Original</span>
+              </div>
+              <!-- Foreground: Edited (Clipped) -->
+              <div id="split-overlay" class="absolute inset-0 flex items-center justify-center p-4 overflow-hidden pointer-events-none" style="clip-path: inset(0 50% 0 0);">
+                <img id="img-split-edit" src="" alt="Edited" class="max-h-full max-w-full object-contain pointer-events-none" />
+                <span class="absolute bottom-4 right-4 bg-pink-600/90 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-md">Edited</span>
+              </div>
+              <!-- Divider Line -->
+              <div id="split-divider" class="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.5)] z-10 flex items-center justify-center pointer-events-none" style="left: 50%;">
+                <div class="w-8 h-8 rounded-full bg-white shadow-md border-2 border-pink-500 flex items-center justify-center text-pink-600 text-xs font-bold">
+                  ↔
+                </div>
+              </div>
+            </div>
+
+            <!-- Mode 3: Side-by-Side -->
+            <div id="stage-compare" class="hidden w-full grid grid-cols-1 md:grid-cols-2 gap-2 p-3 bg-pink-50/50">
+              <div class="flex flex-col items-center">
+                <span class="text-xs font-bold text-pink-900 mb-1.5">Original</span>
+                <div class="w-full h-64 flex items-center justify-center bg-white rounded-xl border border-pink-200 p-2 overflow-hidden">
+                  <img id="img-compare-orig" src="" alt="Original" class="max-h-full max-w-full object-contain rounded" />
+                </div>
+              </div>
+              <div class="flex flex-col items-center">
+                <span class="text-xs font-bold text-pink-600 mb-1.5">Edited Result</span>
+                <div class="w-full h-64 flex items-center justify-center rounded-xl border border-pink-200 p-2 overflow-hidden checkerboard-bg">
+                  <img id="img-compare-edit" src="" alt="Edited" class="max-h-full max-w-full object-contain rounded" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Hold to view original button (Single Mode) -->
+            <button id="btn-hold-orig" type="button" class="hidden absolute top-4 left-4 z-10 px-3 py-1.5 bg-white/90 backdrop-blur-md hover:bg-white text-pink-900 text-xs font-semibold rounded-xl border border-pink-200 shadow-md transition-all active:scale-95 flex items-center gap-1.5">
+              <span>👁️ Hold to View Original</span>
+            </button>
+          </div>
+
+          <!-- Bottom Action Bar -->
+          <div class="p-3 md:p-4 bg-pink-50/70 border-t border-pink-100 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <button id="btn-use-as-input" type="button" onclick="handleUseAsInput()" class="hidden px-3 py-2 bg-pink-100 hover:bg-pink-200 text-pink-900 font-semibold text-xs rounded-xl border border-pink-300 transition-all flex items-center gap-1.5 shadow-sm active:scale-95">
+                <span>✨ Use as Next Input</span>
+              </button>
+              <button id="btn-copy-img" type="button" onclick="handleCopyImage()" class="px-3 py-2 bg-white hover:bg-pink-100 text-pink-800 font-semibold text-xs rounded-xl border border-pink-200 transition-all flex items-center gap-1.5 shadow-sm active:scale-95">
+                <span id="copy-btn-text">📋 Copy Image</span>
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button id="btn-download" type="button" onclick="handleDownload()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-bold text-sm rounded-xl shadow-md shadow-pink-200 transition-all active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span id="download-btn-text">Download PNG</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-pink-200 bg-white/60 backdrop-blur-sm py-4 text-center text-xs text-pink-600">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-1.5 font-medium">
+        <span>Edit Photo</span>
+        <span>•</span>
+        <span>Made with 💖 for instant photo editing</span>
+      </div>
+      <div class="text-[11px] text-pink-500 font-semibold">
+        <span>Instant & Free • Zero API Keys Needed</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==================== JAVASCRIPT ==================== -->
+  <script>
+    // State
+    let originalImage = null;
+    let currentImage = null;
+    let activeLabel = 'Original';
+    let selectedResolution = '1080p';
+    let viewMode = 'single';
+    let activeTab = 'filter';
+    let versions = [];
+    let activeVersionId = '';
+
+    // CSS Filter state
+    let cssFilters = {
+      grayscale: 0,
+      sepia: 0,
+      invert: 0,
+      brightness: 100,
+    };
+
+    // Helper: Build CSS filter string
+    function getFilterString() {
+      return `grayscale(${cssFilters.grayscale}%) sepia(${cssFilters.sepia}%) invert(${cssFilters.invert}%) brightness(${cssFilters.brightness}%)`;
+    }
+
+    function isFilterActive() {
+      return cssFilters.grayscale > 0 || cssFilters.sepia > 0 || cssFilters.invert > 0 || cssFilters.brightness !== 100;
+    }
+
+    // Toast Notification Helper
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const isSuccess = type === 'success';
+      toast.className = `p-3.5 mb-2 rounded-2xl shadow-lg border flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold backdrop-blur-md transition-all ${
+        isSuccess ? 'bg-white/95 border-emerald-300 text-emerald-900 shadow-emerald-100' : 'bg-white/95 border-rose-300 text-rose-900 shadow-rose-100'
+      }`;
+      toast.innerHTML = `
+        <div class="flex items-center gap-2.5">
+          <span>${isSuccess ? '✅' : '⚠️'}</span>
+          <span>${message}</span>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // Helper to safely load image to HTMLImageElement
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        if (!src) return reject(new Error('Image source is empty'));
+        const img = new Image();
+        if (src.startsWith('http://') || src.startsWith('https://')) {
+          img.crossOrigin = 'anonymous';
+        }
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Failed to load image on canvas'));
+        img.src = src;
+      });
+    }
+
+    // Set Image into app
+    function setImage(dataUrl, fileName = 'Original Photo') {
+      originalImage = dataUrl;
+      currentImage = dataUrl;
+      activeLabel = 'Original';
+      resetFiltersState();
+
+      const newVer = {
+        id: 'ver-' + Date.now(),
+        label: fileName,
+        dataUrl: dataUrl,
+      };
+      versions = [newVer];
+      activeVersionId = newVer.id;
+
+      updateUI();
+      showToast(`Photo loaded: ${fileName}`);
+    }
+
+    // Tabs switching
+    function switchTab(tab) {
+      activeTab = tab;
+      const tabs = ['filter', 'remove-bg', 'style'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const content = document.getElementById(`tab-content-${t}`);
+        if (t === tab) {
+          btn.className = 'flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 bg-white text-pink-600 shadow-sm border border-pink-200';
+          content.classList.remove('hidden');
+        } else {
+          btn.className = 'flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 text-pink-900/70 hover:text-pink-900 hover:bg-pink-100/50';
+          content.classList.add('hidden');
+        }
+      });
+    }
+
+    // Real-Time Filter Slider Handler
+    function onFilterSliderChange() {
+      cssFilters.grayscale = parseInt(document.getElementById('slider-grayscale').value, 10);
+      cssFilters.sepia = parseInt(document.getElementById('slider-sepia').value, 10);
+      cssFilters.invert = parseInt(document.getElementById('slider-invert').value, 10);
+      cssFilters.brightness = parseInt(document.getElementById('slider-brightness').value, 10);
+
+      document.getElementById('badge-grayscale').innerText = cssFilters.grayscale + '%';
+      document.getElementById('badge-sepia').innerText = cssFilters.sepia + '%';
+      document.getElementById('badge-invert').innerText = cssFilters.invert + '%';
+      document.getElementById('badge-brightness').innerText = cssFilters.brightness + '%';
+
+      applyLiveFilterToDOM();
+    }
+
+    function applyPreset(gray, sep, inv, bright) {
+      document.getElementById('slider-grayscale').value = gray;
+      document.getElementById('slider-sepia').value = sep;
+      document.getElementById('slider-invert').value = inv;
+      document.getElementById('slider-brightness').value = bright;
+      onFilterSliderChange();
+    }
+
+    function resetFiltersState() {
+      cssFilters = { grayscale: 0, sepia: 0, invert: 0, brightness: 100 };
+      document.getElementById('slider-grayscale').value = 0;
+      document.getElementById('slider-sepia').value = 0;
+      document.getElementById('slider-invert').value = 0;
+      document.getElementById('slider-brightness').value = 100;
+      document.getElementById('badge-grayscale').innerText = '0%';
+      document.getElementById('badge-sepia').innerText = '0%';
+      document.getElementById('badge-invert').innerText = '0%';
+      document.getElementById('badge-brightness').innerText = '100%';
+      applyLiveFilterToDOM();
+    }
+
+    function resetFilters() {
+      resetFiltersState();
+      showToast('Filters reset to default');
+    }
+
+    function applyLiveFilterToDOM() {
+      const filterStr = getFilterString();
+      const active = isFilterActive();
+
+      const imgSingle = document.getElementById('img-single');
+      const imgSplitEdit = document.getElementById('img-split-edit');
+      const imgCompareEdit = document.getElementById('img-compare-edit');
+      const filterBadge = document.getElementById('preview-filter-badge');
+      const btnResetFilters = document.getElementById('btn-reset-filters');
+      const btnBakeFilter = document.getElementById('btn-bake-filter');
+      const tabFilterIndicator = document.getElementById('tab-filter-indicator');
+
+      if (active) {
+        imgSingle.style.filter = filterStr;
+        imgSplitEdit.style.filter = filterStr;
+        imgCompareEdit.style.filter = filterStr;
+        filterBadge.classList.remove('hidden');
+        btnResetFilters.classList.remove('hidden');
+        btnBakeFilter.classList.remove('hidden');
+        tabFilterIndicator.classList.remove('hidden');
+      } else {
+        imgSingle.style.filter = 'none';
+        imgSplitEdit.style.filter = 'none';
+        imgCompareEdit.style.filter = 'none';
+        filterBadge.classList.add('hidden');
+        btnResetFilters.classList.add('hidden');
+        btnBakeFilter.classList.add('hidden');
+        tabFilterIndicator.classList.add('hidden');
+      }
+
+      updateCompareButtonState();
+    }
+
+    // Bake CSS filters onto a canvas Data URL
+    async function bakeCssFilters(dataUrl, filterStr) {
+      const img = await loadImage(dataUrl);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.filter = filterStr;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/png');
+    }
+
+    // Save filtered version
+    async function bakeFilterToVersion() {
+      if (!currentImage) return;
+      if (!isFilterActive()) return;
+      try {
+        const baked = await bakeCssFilters(currentImage, getFilterString());
+        const newVer = {
+          id: 'ver-' + Date.now(),
+          label: 'Filtered Photo',
+          dataUrl: baked,
+        };
+        currentImage = baked;
+        activeLabel = 'Filtered Photo';
+        versions.push(newVer);
+        activeVersionId = newVer.id;
+        resetFiltersState();
+        updateUI();
+        showToast('Filtered photo saved as new version!');
+      } catch (e) {
+        showToast('Failed to save filtered photo: ' + e.message, 'error');
+      }
+    }
+
+    // 1. Background Removal
+    async function handleRemoveBg() {
+      if (!currentImage) return showToast('Please upload a photo first', 'error');
+      const btn = document.getElementById('btn-remove-bg');
+      btn.innerText = 'Removing Background...';
+      btn.disabled = true;
+
+      try {
+        const tol = parseInt(document.getElementById('slider-tolerance').value, 10) || 38;
+        const img = await loadImage(currentImage);
+        const canvas = document.createElement('canvas');
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const data = imgData.data;
+
+        // Sample background from borders
+        const samplePoints = [[0,0], [w-1,0], [0,h-1], [w-1,h-1], [Math.floor(w/2),0], [0,Math.floor(h/2)], [w-1,Math.floor(h/2)]];
+        const bgColors = samplePoints.map(([x,y]) => {
+          const idx = (y * w + x) * 4;
+          return [data[idx], data[idx+1], data[idx+2]];
+        });
+
+        const tolSq = tol * tol;
+        const featherSq = (tol + 24) * (tol + 24);
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i], g = data[i+1], b = data[i+2];
+          let minDistSq = Infinity;
+          for (const [br, bg, bb] of bgColors) {
+            const dr = r - br, dg = g - bg, db = b - bb;
+            const dist = dr*dr + dg*dg + db*db;
+            if (dist < minDistSq) minDistSq = dist;
+          }
+          if (minDistSq < tolSq) {
+            data[i+3] = 0;
+          } else if (minDistSq < featherSq) {
+            const ratio = (Math.sqrt(minDistSq) - tol) / 24;
+            data[i+3] = Math.round(Math.min(255, Math.max(0, ratio * 255)));
+          }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+        const resultUrl = canvas.toDataURL('image/png');
+
+        const newVer = {
+          id: 'ver-' + Date.now(),
+          label: 'Background Removed',
+          dataUrl: resultUrl,
+        };
+        currentImage = resultUrl;
+        activeLabel = 'Background Removed';
+        versions.push(newVer);
+        activeVersionId = newVer.id;
+        resetFiltersState();
+        updateUI();
+        showToast('Background removed successfully!');
+      } catch (err) {
+        showToast('Error removing background: ' + err.message, 'error');
+      } finally {
+        btn.innerText = 'Remove Background';
+        btn.disabled = false;
+      }
+    }
+
+    // 2. Style Transfer
+    function setStyle(name) {
+      document.getElementById('style-prompt-input').value = name + ' style, vibrant artistic transformation';
+    }
+
+    async function handleApplyStyle() {
+      if (!currentImage) return showToast('Please upload a photo first', 'error');
+      const prompt = document.getElementById('style-prompt-input').value.trim();
+      if (!prompt) return showToast('Please enter a style prompt', 'error');
+
+      const btn = document.getElementById('btn-apply-style');
+      btn.innerText = 'Applying Style...';
+      btn.disabled = true;
+
+      try {
+        const img = await loadImage(currentImage);
+        const canvas = document.createElement('canvas');
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+
+        const lower = prompt.toLowerCase();
+        if (lower.includes('oil') || lower.includes('paint')) {
+          // Painterly Kuwahara smoothing
+          const copy = new Uint8ClampedArray(d);
+          const step = 2, radius = 3;
+          for (let y = radius; y < h - radius; y += step) {
+            for (let x = radius; x < w - radius; x += step) {
+              let rSum = 0, gSum = 0, bSum = 0, cnt = 0;
+              for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                  const idx = ((y + dy) * w + (x + dx)) * 4;
+                  rSum += copy[idx]; gSum += copy[idx+1]; bSum += copy[idx+2]; cnt++;
+                }
+              }
+              const rAvg = Math.min(255, (rSum / cnt) * 1.05);
+              const gAvg = Math.min(255, (gSum / cnt) * 1.02);
+              const bAvg = Math.min(255, (bSum / cnt) * 1.08);
+              for (let sy = 0; sy < step && y+sy < h; sy++) {
+                for (let sx = 0; sx < step && x+sx < w; sx++) {
+                  const out = ((y + sy) * w + (x + sx)) * 4;
+                  d[out] = rAvg; d[out+1] = gAvg; d[out+2] = bAvg;
+                }
+              }
+            }
+          }
+        } else if (lower.includes('anime')) {
+          for (let i = 0; i < d.length; i += 4) {
+            d[i] = Math.min(255, (Math.floor(d[i]/32)*32 + 16) * 1.15 + 10);
+            d[i+1] = Math.min(255, (Math.floor(d[i+1]/32)*32 + 16) * 1.1 + 8);
+            d[i+2] = Math.min(255, (Math.floor(d[i+2]/32)*32 + 16) * 1.2 + 12);
+          }
+        } else if (lower.includes('cyberpunk') || lower.includes('neon')) {
+          for (let i = 0; i < d.length; i += 4) {
+            const lum = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+            if (lum < 128) {
+              d[i] = Math.min(255, lum * 1.6 + 40);
+              d[i+1] = Math.min(255, lum * 0.4);
+              d[i+2] = Math.min(255, lum * 1.2 + 60);
+            } else {
+              d[i] = Math.min(255, lum * 0.5);
+              d[i+1] = Math.min(255, lum * 1.2 + 30);
+              d[i+2] = Math.min(255, lum * 1.5 + 40);
+            }
+          }
+        } else if (lower.includes('sketch') || lower.includes('pencil')) {
+          const copy = new Uint8ClampedArray(d);
+          for (let y = 1; y < h - 1; y++) {
+            for (let x = 1; x < w - 1; x++) {
+              const idx = (y * w + x) * 4;
+              const lum = 0.299 * copy[idx] + 0.587 * copy[idx+1] + 0.114 * copy[idx+2];
+              const rightLum = 0.299 * copy[(y * w + x + 1)*4] + 0.587 * copy[(y * w + x + 1)*4 + 1] + 0.114 * copy[(y * w + x + 1)*4 + 2];
+              const downLum = 0.299 * copy[((y+1)*w + x)*4] + 0.587 * copy[((y+1)*w + x)*4 + 1] + 0.114 * copy[((y+1)*w + x)*4 + 2];
+              const edge = Math.abs(lum - rightLum) + Math.abs(lum - downLum);
+              const val = Math.max(0, 255 - edge * 4);
+              d[idx] = val; d[idx+1] = val; d[idx+2] = val;
+            }
+          }
+        } else {
+          // General cartoon/boost
+          for (let i = 0; i < d.length; i += 4) {
+            const avg = (d[i] + d[i+1] + d[i+2]) / 3;
+            d[i] = Math.min(255, Math.max(0, avg + (d[i] - avg) * 1.35));
+            d[i+1] = Math.min(255, Math.max(0, avg + (d[i+1] - avg) * 1.35));
+            d[i+2] = Math.min(255, Math.max(0, avg + (d[i+2] - avg) * 1.35));
+          }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+        const resultUrl = canvas.toDataURL('image/png');
+        const shortName = prompt.split(',')[0].slice(0, 20);
+
+        const newVer = {
+          id: 'ver-' + Date.now(),
+          label: `${shortName} Style`,
+          dataUrl: resultUrl,
+        };
+        currentImage = resultUrl;
+        activeLabel = `${shortName} Style`;
+        versions.push(newVer);
+        activeVersionId = newVer.id;
+        resetFiltersState();
+        updateUI();
+        showToast(`Art style applied: "${shortName}"!`);
+      } catch (err) {
+        showToast('Error applying style: ' + err.message, 'error');
+      } finally {
+        btn.innerText = 'Apply Style';
+        btn.disabled = false;
+      }
+    }
+
+    // 3. Resolution Upscale
+    function selectRes(res) {
+      selectedResolution = res;
+      document.querySelectorAll('.res-btn').forEach(b => {
+        if (b.dataset.res === res) {
+          b.className = 'res-btn p-2.5 rounded-xl border text-left transition-all border-pink-500 bg-pink-500 text-white shadow-sm ring-2 ring-pink-400';
+          b.querySelector('span:first-child').className = 'text-xs font-extrabold text-white';
+        } else {
+          b.className = 'res-btn p-2.5 rounded-xl border text-left transition-all border-pink-200 bg-pink-50/50 hover:bg-pink-100';
+          b.querySelector('span:first-child').className = 'text-xs font-extrabold text-pink-950';
+        }
+      });
+    }
+
+    async function handleUpscale() {
+      if (!currentImage) return showToast('Please upload a photo first', 'error');
+      const btn = document.getElementById('btn-upscale');
+      btn.innerText = `Upscaling to ${selectedResolution}...`;
+      btn.disabled = true;
+
+      try {
+        const dimMap = { '144p': 144, '480p': 480, '720p': 720, '1080p': 1080, '4K': 2160 };
+        const targetDim = dimMap[selectedResolution] || 1080;
+
+        const img = await loadImage(currentImage);
+        const origW = img.naturalWidth || img.width;
+        const origH = img.naturalHeight || img.height;
+        const aspect = origW / origH;
+
+        let tw, th;
+        if (aspect >= 1) {
+          th = targetDim;
+          tw = Math.round(targetDim * aspect);
+          if (selectedResolution === '4K' && tw > 3840) {
+            tw = 3840; th = Math.round(3840 / aspect);
+          }
+        } else {
+          tw = targetDim;
+          th = Math.round(targetDim / aspect);
+          if (selectedResolution === '4K' && th > 3840) {
+            th = 3840; tw = Math.round(3840 * aspect);
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = tw;
+        canvas.height = th;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, tw, th);
+
+        // Sharpening pass
+        if (selectedResolution === '720p' || selectedResolution === '1080p' || selectedResolution === '4K') {
+          const imgData = ctx.getImageData(0, 0, tw, th);
+          const d = imgData.data;
+          const copy = new Uint8ClampedArray(d);
+          const amount = selectedResolution === '4K' ? 0.35 : 0.25;
+          for (let y = 1; y < th - 1; y++) {
+            for (let x = 1; x < tw - 1; x++) {
+              const idx = (y * tw + x) * 4;
+              for (let c = 0; c < 3; c++) {
+                const val = copy[idx + c];
+                const up = copy[((y - 1) * tw + x) * 4 + c];
+                const down = copy[((y + 1) * tw + x) * 4 + c];
+                const left = copy[(y * tw + (x - 1)) * 4 + c];
+                const right = copy[(y * tw + (x + 1)) * 4 + c];
+                const laplacian = 4 * val - (up + down + left + right);
+                d[idx + c] = Math.min(255, Math.max(0, val + laplacian * amount));
+              }
+            }
+          }
+          ctx.putImageData(imgData, 0, 0);
+        }
+
+        const upscaledUrl = canvas.toDataURL('image/png');
+        const dimText = `${tw} × ${th} px`;
+
+        const newVer = {
+          id: 'ver-' + Date.now(),
+          label: `${selectedResolution} Upscaled`,
+          dataUrl: upscaledUrl,
+          dimText: dimText,
+          resBadge: selectedResolution,
+        };
+        currentImage = upscaledUrl;
+        activeLabel = `${selectedResolution} Upscaled`;
+        versions.push(newVer);
+        activeVersionId = newVer.id;
+        resetFiltersState();
+        updateUI(dimText, selectedResolution);
+        showToast(`Upscaled to ${selectedResolution} (${dimText})!`);
+      } catch (err) {
+        showToast('Error upscaling: ' + err.message, 'error');
+      } finally {
+        btn.innerText = 'Upscale Image';
+        btn.disabled = false;
+      }
+    }
+
+    // View Modes
+    function setViewMode(mode) {
+      viewMode = mode;
+      const bSingle = document.getElementById('btn-mode-single');
+      const bSplit = document.getElementById('btn-mode-split');
+      const bComp = document.getElementById('btn-mode-compare');
+
+      bSingle.className = mode === 'single' ? 'px-2.5 py-1 rounded-lg font-medium transition-all bg-pink-500 text-white' : 'px-2.5 py-1 rounded-lg font-medium transition-all text-pink-700 hover:bg-pink-50';
+      bSplit.className = mode === 'split' ? 'px-2.5 py-1 rounded-lg font-medium transition-all bg-pink-500 text-white' : 'px-2.5 py-1 rounded-lg font-medium transition-all text-pink-700 hover:bg-pink-50';
+      bComp.className = mode === 'compare' ? 'px-2.5 py-1 rounded-lg font-medium transition-all bg-pink-500 text-white' : 'px-2.5 py-1 rounded-lg font-medium transition-all text-pink-700 hover:bg-pink-50';
+
+      document.getElementById('stage-single').classList.toggle('hidden', mode !== 'single');
+      document.getElementById('stage-split').classList.toggle('hidden', mode !== 'split');
+      document.getElementById('stage-compare').classList.toggle('hidden', mode !== 'compare');
+
+      updateCompareButtonState();
+    }
+
+    function updateCompareButtonState() {
+      const isEdited = versions.length > 1;
+      const hasFilter = isFilterActive();
+      const showCompare = (isEdited || hasFilter) && originalImage;
+
+      document.getElementById('view-mode-bar').classList.toggle('hidden', !showCompare);
+      document.getElementById('btn-hold-orig').classList.toggle('hidden', !(showCompare && viewMode === 'single'));
+    }
+
+    // Backdrop
+    function setBackdrop(style) {
+      const stage = document.getElementById('stage-container');
+      stage.className = 'relative w-full overflow-hidden flex items-center justify-center min-h-[340px] max-h-[580px] select-none ' +
+        (style === 'checker' ? 'checkerboard-bg' : style === 'white' ? 'bg-white' : style === 'soft-pink' ? 'bg-[#ffd6e0]' : 'bg-[#ec4899]');
+    }
+
+    // Hold to View Original
+    const btnHold = document.getElementById('btn-hold-orig');
+    btnHold.addEventListener('mousedown', () => {
+      if (originalImage) {
+        document.getElementById('img-single').src = originalImage;
+        document.getElementById('img-single').style.filter = 'none';
+      }
+    });
+    btnHold.addEventListener('mouseup', () => {
+      if (currentImage) {
+        document.getElementById('img-single').src = currentImage;
+        applyLiveFilterToDOM();
+      }
+    });
+    btnHold.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (originalImage) {
+        document.getElementById('img-single').src = originalImage;
+        document.getElementById('img-single').style.filter = 'none';
+      }
+    });
+    btnHold.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (currentImage) {
+        document.getElementById('img-single').src = currentImage;
+        applyLiveFilterToDOM();
+      }
+    });
+
+    // Split Slider Dragging
+    const splitStage = document.getElementById('stage-split');
+    function handleSplitMove(clientX) {
+      const rect = splitStage.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+      document.getElementById('split-overlay').style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+      document.getElementById('split-divider').style.left = `${pct}%`;
+    }
+    splitStage.addEventListener('mousemove', (e) => {
+      if (e.buttons === 1) handleSplitMove(e.clientX);
+    });
+    splitStage.addEventListener('click', (e) => handleSplitMove(e.clientX));
+    splitStage.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) handleSplitMove(e.touches[0].clientX);
+    });
+
+    // Use current as next input
+    function handleUseAsInput() {
+      if (!currentImage) return;
+      originalImage = currentImage;
+      showToast('Current result set as the input for your next edit.');
+      updateUI();
+    }
+
+    // Download PNG (with baked filter)
+    async function handleDownload() {
+      if (!currentImage) return;
+      const btnText = document.getElementById('download-btn-text');
+      btnText.innerText = 'Preparing PNG...';
+
+      try {
+        let downloadUrl = currentImage;
+        if (isFilterActive()) {
+          downloadUrl = await bakeCssFilters(currentImage, getFilterString());
+        }
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `editphoto-${activeLabel.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('Image downloaded!');
+      } catch (err) {
+        showToast('Download error: ' + err.message, 'error');
+      } finally {
+        btnText.innerText = 'Download PNG';
+      }
+    }
+
+    // Copy Image to Clipboard
+    async function handleCopyImage() {
+      if (!currentImage) return;
+      const btnText = document.getElementById('copy-btn-text');
+      btnText.innerText = 'Copying...';
+
+      try {
+        let copyUrl = currentImage;
+        if (isFilterActive()) {
+          copyUrl = await bakeCssFilters(currentImage, getFilterString());
+        }
+        const res = await fetch(copyUrl);
+        const blob = await res.blob();
+        await navigator.clipboard.write([
+          new ClipboardItem({ [blob.type]: blob })
+        ]);
+        btnText.innerText = 'Copied!';
+        showToast('Image copied to clipboard!');
+        setTimeout(() => btnText.innerText = '📋 Copy Image', 2000);
+      } catch (e) {
+        // Fallback
+        await navigator.clipboard.writeText(currentImage);
+        btnText.innerText = 'Copied Data!';
+        showToast('Image data URL copied!');
+        setTimeout(() => btnText.innerText = '📋 Copy Image', 2000);
+      }
+    }
+
+    // Update UI elements
+    function updateUI(dimText = '', resBadge = '') {
+      if (!currentImage) {
+        document.getElementById('stage-empty').classList.remove('hidden');
+        document.getElementById('stage-single').classList.add('hidden');
+        document.getElementById('stage-split').classList.add('hidden');
+        document.getElementById('stage-compare').classList.add('hidden');
+        document.getElementById('btn-reset-all').classList.add('hidden');
+        document.getElementById('btn-use-as-input').classList.add('hidden');
+        document.getElementById('version-history-box').classList.add('hidden');
+        document.getElementById('upload-box-title').innerText = 'Upload a Photo from Device';
+        return;
+      }
+
+      document.getElementById('stage-empty').classList.add('hidden');
+      document.getElementById('stage-single').classList.remove('hidden');
+      document.getElementById('btn-reset-all').classList.remove('hidden');
+      document.getElementById('upload-box-title').innerText = 'Replace Photo from Device';
+
+      // Set Image sources
+      document.getElementById('img-single').src = currentImage;
+      if (originalImage) {
+        document.getElementById('img-split-orig').src = originalImage;
+        document.getElementById('img-split-edit').src = currentImage;
+        document.getElementById('img-compare-orig').src = originalImage;
+        document.getElementById('img-compare-edit').src = currentImage;
+      }
+
+      document.getElementById('preview-active-label').innerText = activeLabel;
+
+      // Dim & Res Badges
+      const dimBadge = document.getElementById('preview-dim-badge');
+      if (dimText) {
+        dimBadge.innerText = dimText;
+        dimBadge.classList.remove('hidden');
+      } else {
+        dimBadge.classList.add('hidden');
+      }
+
+      const resBadgeEl = document.getElementById('preview-res-badge');
+      if (resBadge) {
+        resBadgeEl.innerText = resBadge;
+        resBadgeEl.classList.remove('hidden');
+      } else {
+        resBadgeEl.classList.add('hidden');
+      }
+
+      // Input button
+      document.getElementById('btn-use-as-input').classList.toggle('hidden', versions.length <= 1);
+
+      // Version history
+      if (versions.length > 1) {
+        document.getElementById('version-history-box').classList.remove('hidden');
+        const vList = document.getElementById('version-history-list');
+        vList.innerHTML = '';
+        versions.forEach(v => {
+          const isActive = v.id === activeVersionId;
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = `shrink-0 flex items-center gap-2 p-1.5 rounded-xl border text-left transition-all ${
+            isActive ? 'bg-pink-100 border-pink-500 ring-2 ring-pink-400' : 'bg-white border-pink-200 hover:bg-pink-50'
+          }`;
+          b.innerHTML = `
+            <div class="w-9 h-9 rounded-lg overflow-hidden bg-pink-50 checkerboard-bg shrink-0 border border-pink-100">
+              <img src="${v.dataUrl}" class="w-full h-full object-cover" />
+            </div>
+            <div class="pr-2 max-w-[110px]">
+              <span class="block text-[11px] font-bold text-pink-950 truncate">${v.label}</span>
+            </div>
+          `;
+          b.onclick = () => {
+            currentImage = v.dataUrl;
+            activeLabel = v.label;
+            activeVersionId = v.id;
+            resetFiltersState();
+            updateUI(v.dimText || '', v.resBadge || '');
+          };
+          vList.appendChild(b);
+        });
+      } else {
+        document.getElementById('version-history-box').classList.add('hidden');
+      }
+
+      applyLiveFilterToDOM();
+    }
+
+    // Reset All Button
+    document.getElementById('btn-reset-all').addEventListener('click', () => {
+      originalImage = null;
+      currentImage = null;
+      versions = [];
+      activeVersionId = '';
+      resetFiltersState();
+      updateUI();
+      showToast('Photo cleared.');
+    });
+
+    // File Upload Handlers
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const btnSelect = document.getElementById('btn-select-file');
+
+    btnSelect.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        readFile(e.target.files[0]);
+      }
+      e.target.value = '';
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-pink-500', 'bg-pink-100/70');
+    });
+    dropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-pink-500', 'bg-pink-100/70');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-pink-500', 'bg-pink-100/70');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        readFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    function readFile(file) {
+      if (!file.type.startsWith('image/')) {
+        return showToast('Selected file is not an image.', 'error');
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImage(e.target.result, file.name);
+      };
+      reader.onerror = () => showToast('Failed to read file.', 'error');
+      reader.readAsDataURL(file);
+    }
+
+    // Sample Image Generator (Built-in offline procedural canvas)
+    function loadSample(type) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 600;
+      const ctx = canvas.getContext('2d');
+
+      if (type === 'flower') {
+        // Cherry Blossom floral canvas
+        const grad = ctx.createLinearGradient(0, 0, 600, 600);
+        grad.addColorStop(0, '#fce7f3');
+        grad.addColorStop(1, '#fbcfe8');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 600, 600);
+
+        // Center flower petals
+        const cx = 300, cy = 300, numPetals = 8;
+        for (let i = 0; i < numPetals; i++) {
+          const angle = (i * 2 * Math.PI) / numPetals;
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(angle);
+          ctx.fillStyle = i % 2 === 0 ? '#ec4899' : '#f472b6';
+          ctx.beginPath();
+          ctx.ellipse(0, 110, 48, 100, 0, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.restore();
+        }
+        // Flower center
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 45, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 28, 0, 2 * Math.PI);
+        ctx.fill();
+        setImage(canvas.toDataURL('image/png'), 'Cherry Blossom Sample');
+      } else if (type === 'portrait') {
+        // Portrait Silhouette Sample
+        const grad = ctx.createRadialGradient(300, 300, 50, 300, 300, 350);
+        grad.addColorStop(0, '#ffd1dc');
+        grad.addColorStop(1, '#be185d');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 600, 600);
+
+        // Head & Shoulders silhouette
+        ctx.fillStyle = '#831843';
+        // Head
+        ctx.beginPath();
+        ctx.arc(300, 240, 85, 0, 2 * Math.PI);
+        ctx.fill();
+        // Shoulders
+        ctx.beginPath();
+        ctx.ellipse(300, 490, 190, 140, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        setImage(canvas.toDataURL('image/png'), 'Portrait Sample');
+      } else {
+        // Sunset Horizon Sample
+        const grad = ctx.createLinearGradient(0, 0, 0, 600);
+        grad.addColorStop(0, '#be185d');
+        grad.addColorStop(0.4, '#f43f5e');
+        grad.addColorStop(0.7, '#fb923c');
+        grad.addColorStop(1, '#fde047');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 600, 600);
+
+        // Sun
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(300, 320, 75, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Mountains
+        ctx.fillStyle = '#4c0519';
+        ctx.beginPath();
+        ctx.moveTo(0, 600);
+        ctx.lineTo(160, 410);
+        ctx.lineTo(340, 530);
+        ctx.lineTo(480, 440);
+        ctx.lineTo(600, 600);
+        ctx.closePath();
+        ctx.fill();
+        setImage(canvas.toDataURL('image/png'), 'Sunset Sample');
+      }
+    }
+
+    // Initialize with sample on first load
+    loadSample('flower');
+  </script>
+</body>
+</html>

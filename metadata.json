@@ -1,0 +1,6 @@
+{
+  "name": "Edit Photo",
+  "description": "Enhance and fix blurry photos, restore vintage photos, create AI headshots and toons, and upscale to 4K with zero API keys required and interactive Before/After sliders.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

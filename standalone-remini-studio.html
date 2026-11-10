@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Remini Studio - AI Photo Enhancer, Restore & Toon</title>
+  <meta name="description" content="Complete standalone photo editor: Enhance blurry photos, restore vintage photos, apply AI headshot and 3D toon filters, and upscale to 4K with interactive Before/After sliders." />
+  <meta name="theme-color" content="#0b0c12" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pink: {
+              50: '#fdf2f8',
+              100: '#fce7f3',
+              200: '#fbcfe8',
+              300: '#f9a8d4',
+              400: '#f472b6',
+              500: '#ec4899',
+              600: '#db2777',
+              700: '#be185d',
+              800: '#9d174d',
+              900: '#831843',
+              950: '#500724',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: #0b0c12;
+      color: #f4f4f5;
+    }
+    .checkerboard-bg {
+      background-color: #1a1c2a;
+      background-image:
+        linear-gradient(45deg, #26293d 25%, transparent 25%),
+        linear-gradient(-45deg, #26293d 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #26293d 75%),
+        linear-gradient(-45deg, transparent 75%, #26293d 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+    input[type=range] {
+      accent-color: #ec4899;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0b0c12;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #ec4899;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-zinc-100 flex flex-col selection:bg-pink-500 selection:text-white bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(236,72,153,0.18),rgba(255,255,255,0))]">
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92%] transition-all pointer-events-none"></div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-[#13151f]/85 backdrop-blur-xl border-b border-pink-500/20 shadow-xl shadow-black/40">
+    <div class="max-w-6xl mx-auto px-4 py-3 sm:py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-pink-500/30">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-pink-400 via-rose-300 to-pink-200 bg-clip-text text-transparent">
+              Remini Studio
+            </h1>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/40 uppercase tracking-wider flex items-center gap-1">
+              ⚡ Free & Instant
+            </span>
+          </div>
+          <p class="text-[11px] text-zinc-400 font-medium hidden sm:block">
+            AI Photo Enhancer, Old Photo Restore, 3D Toon & 4K Upscaler (Zero API Keys)
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="btn-reset-all" type="button" class="hidden px-3 py-1.5 text-xs font-semibold text-pink-300 hover:text-white bg-pink-500/10 hover:bg-pink-500/20 rounded-xl border border-pink-500/30 transition-all flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Reset Photo</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- Remini Suite Banner -->
+    <div class="w-full bg-[#13151f]/90 backdrop-blur-xl border border-pink-500/25 rounded-3xl p-4 sm:p-5 shadow-2xl shadow-pink-950/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/30 shrink-0">
+          <svg class="w-5 h-5 fill-white" viewBox="0 0 24 24">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm sm:text-base font-extrabold text-white">
+              Remini Quality Enhancement Suite
+            </h2>
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              100% Client-Side Engine
+            </span>
+          </div>
+          <p class="text-xs text-zinc-400 mt-0.5">
+            Fix blurry photos, restore vintage archival portraits, generate 3D toon characters, and upscale to 4K with interactive Before/After sliders.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-pink-300 bg-black/40 px-3 py-1.5 rounded-xl border border-pink-500/20">
+        <span>⚡ Enhance</span> • <span>🕰️ Restore</span> • <span>🎭 AI Toon</span> • <span>📸 Photoshoot</span> • <span>🚀 4K</span>
+      </div>
+    </div>
+
+    <!-- Grid Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- Left Column: Upload, Tools, Upscaler -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- 1. UPLOADER & SAMPLE CARDS -->
+        <div class="space-y-4">
+          <input id="file-input" type="file" accept="image/*" class="hidden" />
+
+          <div id="drop-zone" class="border-2 border-dashed rounded-3xl p-6 md:p-7 text-center cursor-pointer transition-all duration-200 border-pink-500/30 hover:border-pink-400 bg-[#13151f]/95 hover:bg-[#1a1c2a] shadow-xl shadow-pink-950/20">
+            <div class="flex flex-col items-center justify-center space-y-3">
+              <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-pink-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/30">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              </div>
+              <div>
+                <h3 id="upload-box-title" class="text-base font-bold text-white">
+                  Upload Photo to Enhance
+                </h3>
+                <p class="text-xs text-zinc-400 mt-1">
+                  Select or drop a blurry, vintage, or portrait photo (JPG, PNG, WebP)
+                </p>
+              </div>
+              <button id="btn-select-file" type="button" class="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-pink-500/30 transition-all active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span>Select Photo</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Samples -->
+          <div class="bg-[#13151f]/95 backdrop-blur-md border border-pink-500/25 rounded-2xl p-3.5 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-pink-200 flex items-center gap-1.5 uppercase tracking-wider">
+                ✨ Try Remini Test Samples:
+              </span>
+              <span class="text-[10px] text-zinc-400">1-click test</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button type="button" onclick="loadSample('blurry')" class="flex flex-col items-start text-left p-1.5 bg-black/40 hover:bg-white/5 border border-white/10 hover:border-pink-500/40 rounded-xl transition-all group overflow-hidden">
+                <div class="w-full aspect-square rounded-lg bg-pink-950/60 mb-1.5 flex items-center justify-center text-2xl border border-white/5">
+                  🔍
+                </div>
+                <span class="text-xs font-bold text-zinc-100 truncate w-full">Blurry Face</span>
+                <span class="text-[10px] text-pink-400 truncate w-full">Test Enhance</span>
+              </button>
+              <button type="button" onclick="loadSample('vintage')" class="flex flex-col items-start text-left p-1.5 bg-black/40 hover:bg-white/5 border border-white/10 hover:border-pink-500/40 rounded-xl transition-all group overflow-hidden">
+                <div class="w-full aspect-square rounded-lg bg-pink-950/60 mb-1.5 flex items-center justify-center text-2xl border border-white/5">
+                  📜
+                </div>
+                <span class="text-xs font-bold text-zinc-100 truncate w-full">1950s Photo</span>
+                <span class="text-[10px] text-pink-400 truncate w-full">Test Restore</span>
+              </button>
+              <button type="button" onclick="loadSample('portrait')" class="flex flex-col items-start text-left p-1.5 bg-black/40 hover:bg-white/5 border border-white/10 hover:border-pink-500/40 rounded-xl transition-all group overflow-hidden">
+                <div class="w-full aspect-square rounded-lg bg-pink-950/60 mb-1.5 flex items-center justify-center text-2xl border border-white/5">
+                  👤
+                </div>
+                <span class="text-xs font-bold text-zinc-100 truncate w-full">Studio Model</span>
+                <span class="text-[10px] text-pink-400 truncate w-full">Test Toon</span>
+              </button>
+              <button type="button" onclick="loadSample('flower')" class="flex flex-col items-start text-left p-1.5 bg-black/40 hover:bg-white/5 border border-white/10 hover:border-pink-500/40 rounded-xl transition-all group overflow-hidden">
+                <div class="w-full aspect-square rounded-lg bg-pink-950/60 mb-1.5 flex items-center justify-center text-2xl border border-white/5">
+                  🌸
+                </div>
+                <span class="text-xs font-bold text-zinc-100 truncate w-full">Blossom</span>
+                <span class="text-[10px] text-pink-400 truncate w-full">Test Shoot</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. REMINI EDITING MODES SUITE -->
+        <div class="w-full bg-[#13151f]/95 backdrop-blur-xl border border-pink-500/25 rounded-3xl shadow-xl shadow-pink-950/30 overflow-hidden text-white">
+          <div class="p-3 border-b border-pink-500/15 bg-gradient-to-r from-pink-950/40 via-purple-950/20 to-pink-950/40 flex items-center justify-between">
+            <span class="text-xs font-extrabold tracking-wider uppercase text-pink-200">Remini Studio Modes</span>
+            <span class="text-[10px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">100% Client-Side Engine</span>
+          </div>
+
+          <!-- 5 Tabs Bar -->
+          <div class="grid grid-cols-5 p-1.5 gap-1 bg-black/40 border-b border-pink-500/10 text-center">
+            <button id="tab-btn-enhance" type="button" onclick="switchMode('enhance')" class="py-2 px-1 rounded-2xl text-[11px] sm:text-xs font-bold bg-gradient-to-b from-pink-500 to-rose-600 text-white shadow-md ring-1 ring-pink-400">
+              ⚡ Enhance
+            </button>
+            <button id="tab-btn-restore" type="button" onclick="switchMode('restore')" class="py-2 px-1 rounded-2xl text-[11px] sm:text-xs font-bold text-zinc-400 hover:text-white hover:bg-white/5">
+              🕰️ Restore
+            </button>
+            <button id="tab-btn-toon" type="button" onclick="switchMode('toon')" class="py-2 px-1 rounded-2xl text-[11px] sm:text-xs font-bold text-zinc-400 hover:text-white hover:bg-white/5">
+              🎭 AI Toon
+            </button>
+            <button id="tab-btn-photoshoot" type="button" onclick="switchMode('photoshoot')" class="py-2 px-1 rounded-2xl text-[11px] sm:text-xs font-bold text-zinc-400 hover:text-white hover:bg-white/5">
+              📸 Shoot
+            </button>
+            <button id="tab-btn-tools" type="button" onclick="switchMode('tools')" class="py-2 px-1 rounded-2xl text-[11px] sm:text-xs font-bold text-zinc-400 hover:text-white hover:bg-white/5">
+              ✂️ Filters
+            </button>
+          </div>
+
+          <div class="p-4 sm:p-5 space-y-4">
+
+            <!-- MODE 1: ENHANCE -->
+            <div id="mode-panel-enhance" class="space-y-4">
+              <div>
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <span>⚡ Enhance & Fix Blurry Photos</span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">High-Pass Unmask</span>
+                </h3>
+                <p class="text-xs text-zinc-400 mt-1">Synthesizes fine micro-details, eliminates motion blur, and sharpens facial clarity.</p>
+              </div>
+
+              <!-- Presets -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
+                <button type="button" onclick="setEnhancePreset(75, 70, 55, 45)" class="p-2 rounded-xl border bg-pink-500/25 border-pink-400 text-pink-200 text-left">
+                  <div class="font-bold">Face Focus HD</div>
+                  <div class="text-[10px] text-zinc-400">+75% sharp</div>
+                </button>
+                <button type="button" onclick="setEnhancePreset(95, 85, 70, 50)" class="p-2 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left">
+                  <div class="font-bold">Ultra Sharp</div>
+                  <div class="text-[10px] text-zinc-400">+95% sharp</div>
+                </button>
+                <button type="button" onclick="setEnhancePreset(50, 45, 35, 30)" class="p-2 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left">
+                  <div class="font-bold">Soft De-blur</div>
+                  <div class="text-[10px] text-zinc-400">+50% sharp</div>
+                </button>
+                <button type="button" onclick="setEnhancePreset(85, 60, 80, 40)" class="p-2 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left">
+                  <div class="font-bold">Micro Details</div>
+                  <div class="text-[10px] text-zinc-400">+85% sharp</div>
+                </button>
+              </div>
+
+              <!-- Sliders -->
+              <div class="space-y-3 p-3.5 bg-black/40 rounded-2xl border border-white/10 text-xs">
+                <div>
+                  <div class="flex justify-between font-bold text-zinc-200 mb-1">
+                    <span>Sharpness (Unsharp Mask):</span>
+                    <span id="badge-enhance-sharp" class="font-mono text-pink-400 font-bold bg-pink-950/60 px-2 py-0.5 rounded border border-pink-500/30">75%</span>
+                  </div>
+                  <input id="slider-enhance-sharp" type="range" min="10" max="100" value="75" oninput="document.getElementById('badge-enhance-sharp').innerText = this.value + '%'" class="w-full" />
+                </div>
+                <div class="pt-2 border-t border-white/5">
+                  <div class="flex justify-between font-bold text-zinc-200 mb-1">
+                    <span>De-blur Frequency Power:</span>
+                    <span id="badge-enhance-deblur" class="font-mono text-pink-400 font-bold bg-pink-950/60 px-2 py-0.5 rounded border border-pink-500/30">70%</span>
+                  </div>
+                  <input id="slider-enhance-deblur" type="range" min="0" max="100" value="70" oninput="document.getElementById('badge-enhance-deblur').innerText = this.value + '%'" class="w-full" />
+                </div>
+                <div class="pt-2 border-t border-white/5">
+                  <div class="flex justify-between font-bold text-zinc-200 mb-1">
+                    <span>Clarity & Contrast:</span>
+                    <span id="badge-enhance-clarity" class="font-mono text-pink-400 font-bold bg-pink-950/60 px-2 py-0.5 rounded border border-pink-500/30">55%</span>
+                  </div>
+                  <input id="slider-enhance-clarity" type="range" min="0" max="100" value="55" oninput="document.getElementById('badge-enhance-clarity').innerText = this.value + '%'" class="w-full" />
+                </div>
+              </div>
+
+              <button id="btn-run-enhance" type="button" onclick="runEnhance()" class="w-full py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-700 text-white shadow-lg shadow-pink-600/30 active:scale-[0.99] transition-all">
+                <span>⚡ Enhance & Fix Photo</span>
+              </button>
+            </div>
+
+            <!-- MODE 2: RESTORE -->
+            <div id="mode-panel-restore" class="hidden space-y-4">
+              <div>
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <span>🕰️ Restore Old Photos</span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">Denoise & Sepia Repair</span>
+                </h3>
+                <p class="text-xs text-zinc-400 mt-1">Removes film noise, scratches, and yellowed fading. Restores dynamic range.</p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <button type="button" onclick="selectRestoreTone('restore-color')" class="restore-tone-btn p-2.5 rounded-xl border bg-pink-500/25 border-pink-400 text-white text-left ring-1 ring-pink-400" data-tone="restore-color">
+                  <div class="font-bold">🎨 Revitalize Colors</div>
+                  <p class="text-[10px] text-zinc-400 mt-0.5">Corrects aging & boosts color</p>
+                </button>
+                <button type="button" onclick="selectRestoreTone('clean-bw')" class="restore-tone-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left" data-tone="clean-bw">
+                  <div class="font-bold">🎞️ Archival Clean B&W</div>
+                  <p class="text-[10px] text-zinc-400 mt-0.5">Crisp monochrome silver</p>
+                </button>
+                <button type="button" onclick="selectRestoreTone('vintage-sepia')" class="restore-tone-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left" data-tone="vintage-sepia">
+                  <div class="font-bold">📜 1900s Archival Sepia</div>
+                  <p class="text-[10px] text-zinc-400 mt-0.5">Warm vintage tones</p>
+                </button>
+                <button type="button" onclick="selectRestoreTone('polaroid')" class="restore-tone-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left" data-tone="polaroid">
+                  <div class="font-bold">📷 1970s Polaroid</div>
+                  <p class="text-[10px] text-zinc-400 mt-0.5">Warm shadows & soft blacks</p>
+                </button>
+              </div>
+
+              <div class="space-y-3 p-3.5 bg-black/40 rounded-2xl border border-white/10 text-xs">
+                <div>
+                  <div class="flex justify-between font-bold text-zinc-200 mb-1">
+                    <span>Denoise & Scratch Smoothing:</span>
+                    <span id="badge-restore-denoise" class="font-mono text-pink-400 font-bold bg-pink-950/60 px-2 py-0.5 rounded border border-pink-500/30">60%</span>
+                  </div>
+                  <input id="slider-restore-denoise" type="range" min="0" max="100" value="60" oninput="document.getElementById('badge-restore-denoise').innerText = this.value + '%'" class="w-full" />
+                </div>
+                <div class="pt-2 border-t border-white/5">
+                  <div class="flex justify-between font-bold text-zinc-200 mb-1">
+                    <span>Fade Recovery (Contrast Stretch):</span>
+                    <span id="badge-restore-fade" class="font-mono text-pink-400 font-bold bg-pink-950/60 px-2 py-0.5 rounded border border-pink-500/30">70%</span>
+                  </div>
+                  <input id="slider-restore-fade" type="range" min="10" max="100" value="70" oninput="document.getElementById('badge-restore-fade').innerText = this.value + '%'" class="w-full" />
+                </div>
+              </div>
+
+              <button id="btn-run-restore" type="button" onclick="runRestore()" class="w-full py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-700 text-white shadow-lg shadow-pink-600/30 active:scale-[0.99] transition-all">
+                <span>🕰️ Restore Old Photo</span>
+              </button>
+            </div>
+
+            <!-- MODE 3: AI TOON -->
+            <div id="mode-panel-toon" class="hidden space-y-4">
+              <div>
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <span>🎭 AI Headshot & Toon Filters</span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">Stylized Portraits</span>
+                </h3>
+                <p class="text-xs text-zinc-400 mt-1">Transform portraits into polished studio headshots or iconic 3D animation characters.</p>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                <button type="button" onclick="selectToonStyle('studio-headshot')" class="toon-style-btn p-2.5 rounded-xl border bg-pink-500/25 border-pink-400 text-white text-left ring-1 ring-pink-400" data-toon="studio-headshot">
+                  <div class="text-base mb-0.5">👔</div>
+                  <div class="font-bold">Studio Headshot</div>
+                  <p class="text-[10px] text-zinc-400">Porcelain skin & sharp eyes</p>
+                </button>
+                <button type="button" onclick="selectToonStyle('toon-3d')" class="toon-style-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left" data-toon="toon-3d">
+                  <div class="text-base mb-0.5">🧸</div>
+                  <div class="font-bold">3D Toon</div>
+                  <p class="text-[10px] text-zinc-400">Pixar animation cel-shading</p>
+                </button>
+                <button type="button" onclick="selectToonStyle('anime')" class="toon-style-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left" data-toon="anime">
+                  <div class="text-base mb-0.5">✨</div>
+                  <div class="font-bold">Anime & Manga</div>
+                  <p class="text-[10px] text-zinc-400">Pastel wash & ink lines</p>
+                </button>
+                <button type="button" onclick="selectToonStyle('comic')" class="toon-style-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left" data-toon="comic">
+                  <div class="text-base mb-0.5">💥</div>
+                  <div class="font-bold">Pop Comic Art</div>
+                  <p class="text-[10px] text-zinc-400">Warhol halftone pop</p>
+                </button>
+                <button type="button" onclick="selectToonStyle('clay')" class="toon-style-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left" data-toon="clay">
+                  <div class="text-base mb-0.5">🎨</div>
+                  <div class="font-bold">Claymation</div>
+                  <p class="text-[10px] text-zinc-400">Tactile matte sculpture</p>
+                </button>
+              </div>
+
+              <div class="p-3.5 bg-black/40 rounded-2xl border border-white/10 text-xs">
+                <div class="flex justify-between font-bold text-zinc-200 mb-1">
+                  <span>Styling Intensity:</span>
+                  <span id="badge-toon-intensity" class="font-mono text-pink-400 font-bold bg-pink-950/60 px-2 py-0.5 rounded border border-pink-500/30">80%</span>
+                </div>
+                <input id="slider-toon-intensity" type="range" min="20" max="100" value="80" oninput="document.getElementById('badge-toon-intensity').innerText = this.value + '%'" class="w-full" />
+              </div>
+
+              <button id="btn-run-toon" type="button" onclick="runToon()" class="w-full py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-700 text-white shadow-lg shadow-pink-600/30 active:scale-[0.99] transition-all">
+                <span>🎭 Generate AI Portrait</span>
+              </button>
+            </div>
+
+            <!-- MODE 4: PHOTOSHOOT -->
+            <div id="mode-panel-photoshoot" class="hidden space-y-4">
+              <div>
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <span>📸 Aesthetic Photoshoot Styles</span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">Virtual Studio</span>
+                </h3>
+                <p class="text-xs text-zinc-400 mt-1">Cinematic lighting, golden hour washes, halation bloom, and 35mm film emulation.</p>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                <button type="button" onclick="selectShootStyle('golden-hour')" class="shoot-style-btn p-2.5 rounded-xl border bg-pink-500/25 border-pink-400 text-white text-left ring-1 ring-pink-400" data-shoot="golden-hour">
+                  <div class="text-base mb-0.5">🌅</div>
+                  <div class="font-bold">Golden Hour</div>
+                  <p class="text-[10px] text-zinc-400">Warm 3200K sunset glow</p>
+                </button>
+                <button type="button" onclick="selectShootStyle('vogue-editorial')" class="shoot-style-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left" data-shoot="vogue-editorial">
+                  <div class="text-base mb-0.5">💎</div>
+                  <div class="font-bold">Vogue Editorial</div>
+                  <p class="text-[10px] text-zinc-400">Velvet shadows & crisp skin</p>
+                </button>
+                <button type="button" onclick="selectShootStyle('cyberpunk-neon')" class="shoot-style-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left" data-shoot="cyberpunk-neon">
+                  <div class="text-base mb-0.5">⚡</div>
+                  <div class="font-bold">Cyberpunk Neon</div>
+                  <p class="text-[10px] text-zinc-400">Cyan & hot pink rim glow</p>
+                </button>
+                <button type="button" onclick="selectShootStyle('y2k-dream')" class="shoot-style-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left" data-shoot="y2k-dream">
+                  <div class="text-base mb-0.5">🌸</div>
+                  <div class="font-bold">Y2K Dream Bloom</div>
+                  <p class="text-[10px] text-zinc-400">Dreamy halation aura</p>
+                </button>
+                <button type="button" onclick="selectShootStyle('kodak-portra')" class="shoot-style-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left" data-shoot="kodak-portra">
+                  <div class="text-base mb-0.5">🎞️</div>
+                  <div class="font-bold">Kodak Portra 400</div>
+                  <p class="text-[10px] text-zinc-400">35mm film curve</p>
+                </button>
+              </div>
+
+              <div class="p-3.5 bg-black/40 rounded-2xl border border-white/10 text-xs">
+                <div class="flex justify-between font-bold text-zinc-200 mb-1">
+                  <span>Atmosphere Strength:</span>
+                  <span id="badge-shoot-strength" class="font-mono text-pink-400 font-bold bg-pink-950/60 px-2 py-0.5 rounded border border-pink-500/30">80%</span>
+                </div>
+                <input id="slider-shoot-strength" type="range" min="20" max="100" value="80" oninput="document.getElementById('badge-shoot-strength').innerText = this.value + '%'" class="w-full" />
+              </div>
+
+              <button id="btn-run-shoot" type="button" onclick="runShoot()" class="w-full py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-700 text-white shadow-lg shadow-pink-600/30 active:scale-[0.99] transition-all">
+                <span>📸 Apply Photoshoot Style</span>
+              </button>
+            </div>
+
+            <!-- MODE 5: CUTOUT & REAL-TIME FILTERS -->
+            <div id="mode-panel-tools" class="hidden space-y-4">
+              <!-- Cutout -->
+              <div class="p-3.5 bg-black/40 rounded-2xl border border-white/10 space-y-3">
+                <div class="flex items-center justify-between text-xs font-bold text-white">
+                  <span>✂️ Background Cutout</span>
+                  <span id="badge-cutout-tol" class="font-mono text-pink-400 font-bold">Tol: 38</span>
+                </div>
+                <input id="slider-cutout-tol" type="range" min="15" max="80" value="38" oninput="document.getElementById('badge-cutout-tol').innerText = 'Tol: ' + this.value" class="w-full" />
+                <button type="button" onclick="runCutout()" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/40 transition-all">
+                  Remove Background Now
+                </button>
+              </div>
+
+              <!-- Live CSS Filters -->
+              <div class="p-3.5 bg-black/40 rounded-2xl border border-white/10 space-y-3 text-xs">
+                <div class="flex items-center justify-between font-bold text-white">
+                  <span>Sliders (Live Real-Time)</span>
+                  <button type="button" onclick="resetFilters()" class="text-[11px] text-pink-400 hover:text-pink-300">Reset</button>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-zinc-300">
+                  <div>
+                    <div class="flex justify-between text-[11px] mb-1">
+                      <span>Grayscale</span><span id="b-gray">0%</span>
+                    </div>
+                    <input id="s-gray" type="range" min="0" max="100" value="0" oninput="onLiveFilterChange()" class="w-full" />
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] mb-1">
+                      <span>Sepia</span><span id="b-sepia">0%</span>
+                    </div>
+                    <input id="s-sepia" type="range" min="0" max="100" value="0" oninput="onLiveFilterChange()" class="w-full" />
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] mb-1">
+                      <span>Invert</span><span id="b-invert">0%</span>
+                    </div>
+                    <input id="s-invert" type="range" min="0" max="100" value="0" oninput="onLiveFilterChange()" class="w-full" />
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] mb-1">
+                      <span>Brightness</span><span id="b-bright">100%</span>
+                    </div>
+                    <input id="s-bright" type="range" min="0" max="200" value="100" oninput="onLiveFilterChange()" class="w-full" />
+                  </div>
+                </div>
+                <button id="btn-bake-filter" type="button" onclick="bakeFilterToVersion()" class="hidden w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-pink-600 hover:bg-pink-700 text-white transition-all shadow-md">
+                  Save Filter Adjustments into Photo
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 3. RESOLUTION / 4K UPSCALER -->
+        <div class="w-full bg-[#13151f]/95 backdrop-blur-xl border border-pink-500/25 rounded-3xl shadow-xl shadow-pink-950/20 p-4 sm:p-5 space-y-4 text-white">
+          <div class="pb-3 border-b border-pink-500/15">
+            <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span>🚀 Remini Ultra 4K Quality Upscaler</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">144p to 4K</span>
+            </h3>
+            <p class="text-xs text-zinc-400 mt-0.5">Scales outputs up to 3840×2160 Ultra HD with multi-pass bicubic unsharp masking.</p>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <button type="button" onclick="selectRes('144p')" class="res-btn p-2 rounded-2xl border text-center transition-all bg-black/40 text-zinc-300 border-white/10" data-res="144p">
+              <span class="text-xs font-extrabold block">144p</span>
+              <span class="text-[9px] px-1 rounded bg-pink-950/60 text-pink-300">Tiny</span>
+            </button>
+            <button type="button" onclick="selectRes('480p')" class="res-btn p-2 rounded-2xl border text-center transition-all bg-black/40 text-zinc-300 border-white/10" data-res="480p">
+              <span class="text-xs font-extrabold block">480p</span>
+              <span class="text-[9px] px-1 rounded bg-pink-950/60 text-pink-300">SD</span>
+            </button>
+            <button type="button" onclick="selectRes('720p')" class="res-btn p-2 rounded-2xl border text-center transition-all bg-black/40 text-zinc-300 border-white/10" data-res="720p">
+              <span class="text-xs font-extrabold block">720p</span>
+              <span class="text-[9px] px-1 rounded bg-pink-950/60 text-pink-300">HD</span>
+            </button>
+            <button type="button" onclick="selectRes('1080p')" class="res-btn p-2 rounded-2xl border text-center transition-all bg-gradient-to-b from-pink-500 to-rose-600 text-white border-pink-400 shadow-lg ring-2 ring-pink-400/50" data-res="1080p">
+              <span class="text-xs font-extrabold block">1080p</span>
+              <span class="text-[9px] px-1 rounded bg-white/20 text-white font-bold">FHD</span>
+            </button>
+            <button type="button" onclick="selectRes('4K')" class="res-btn p-2 rounded-2xl border text-center transition-all bg-black/40 text-zinc-300 border-white/10" data-res="4K">
+              <span class="text-xs font-extrabold block">4K UHD</span>
+              <span class="text-[9px] px-1 rounded bg-pink-950/60 text-pink-300">3840p</span>
+            </button>
+          </div>
+
+          <button id="btn-run-upscale" type="button" onclick="runUpscale()" class="w-full py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-700 text-white shadow-pink-600/30 transition-all active:scale-[0.99]">
+            <span>🚀 Upscale to <span id="label-target-res">1080p</span></span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Interactive Stage & Remini Split Slider -->
+      <div class="lg:col-span-7 space-y-4">
+
+        <!-- History Strip -->
+        <div id="version-box" class="hidden w-full bg-[#13151f]/95 backdrop-blur-xl border border-pink-500/25 rounded-2xl p-3 shadow-xl text-white">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-pink-200 uppercase tracking-wider">📚 Remini Version History</span>
+            <span class="text-[10px] text-zinc-400">Click to inspect</span>
+          </div>
+          <div id="version-list" class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar"></div>
+        </div>
+
+        <!-- Main Preview Box -->
+        <div class="w-full bg-[#13151f]/95 backdrop-blur-xl rounded-3xl border border-pink-500/25 shadow-2xl shadow-pink-950/40 overflow-hidden flex flex-col text-white">
+
+          <!-- Top Toolbar -->
+          <div class="flex flex-wrap items-center justify-between gap-2 p-3 bg-gradient-to-r from-pink-950/40 via-purple-950/20 to-pink-950/40 border-b border-pink-500/15">
+            <div class="flex items-center gap-2">
+              <span id="badge-active-label" class="px-2.5 py-1 rounded-xl text-xs font-extrabold uppercase tracking-wider bg-pink-500 text-white shadow-md">
+                Original
+              </span>
+              <span id="badge-res" class="hidden text-[11px] font-extrabold text-white bg-gradient-to-r from-rose-500 to-pink-600 px-2.5 py-0.5 rounded-lg"></span>
+              <span id="badge-dim" class="hidden text-[11px] font-mono font-semibold text-pink-300 bg-pink-950/60 px-2 py-0.5 rounded-lg border border-pink-500/30"></span>
+            </div>
+
+            <!-- View Mode Switcher -->
+            <div id="view-mode-bar" class="hidden flex items-center gap-1 bg-black/50 p-1 rounded-xl border border-white/10 text-xs">
+              <button id="btn-mode-split" type="button" onclick="setViewMode('split')" class="px-2.5 py-1 rounded-lg font-bold bg-gradient-to-r from-pink-500 to-rose-600 text-white">Remini Split</button>
+              <button id="btn-mode-single" type="button" onclick="setViewMode('single')" class="px-2.5 py-1 rounded-lg font-bold text-zinc-400 hover:text-white">Result</button>
+              <button id="btn-mode-compare" type="button" onclick="setViewMode('compare')" class="px-2.5 py-1 rounded-lg font-bold text-zinc-400 hover:text-white">Side-by-Side</button>
+            </div>
+
+            <!-- Backdrop & Zoom -->
+            <div class="flex items-center gap-2 text-xs text-zinc-400">
+              <button id="btn-zoom-toggle" type="button" onclick="toggleZoom()" class="p-1.5 rounded-lg border bg-white/5 border-white/10 text-zinc-400 hover:text-white">
+                🔍 2x
+              </button>
+              <div class="flex items-center gap-1">
+                <button type="button" onclick="setBackdrop('dark')" class="w-5 h-5 rounded-md border ring-2 ring-pink-500 border-pink-500 bg-[#0b0c12]"></button>
+                <button type="button" onclick="setBackdrop('checker')" class="w-5 h-5 rounded-md border checkerboard-bg border-zinc-700"></button>
+                <button type="button" onclick="setBackdrop('white')" class="w-5 h-5 rounded-md border bg-white border-zinc-700"></button>
+                <button type="button" onclick="setBackdrop('soft-pink')" class="w-5 h-5 rounded-md border bg-[#ffd6e0] border-zinc-700"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Stage -->
+          <div id="stage-viewport" class="relative w-full overflow-hidden flex items-center justify-center min-h-[360px] max-h-[580px] select-none bg-[#0b0c12]">
+
+            <!-- Empty -->
+            <div id="stage-empty" class="w-full aspect-[4/3] max-h-[500px] flex flex-col items-center justify-center p-8 text-center">
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-500 flex items-center justify-center text-white mb-3 shadow-lg shadow-pink-500/30 text-2xl">
+                ⚡
+              </div>
+              <p class="text-base font-bold text-white">No Photo Selected</p>
+              <p class="text-xs text-zinc-400 mt-1 max-w-xs">Upload a photo or choose a sample to unlock Remini AI Enhancement, Restoration, and Toon filters.</p>
+            </div>
+
+            <!-- Mode 1: Single -->
+            <div id="stage-single" class="hidden w-full h-full min-h-[360px] max-h-[580px] flex items-center justify-center p-4">
+              <img id="img-single" src="" alt="Result" class="max-h-[520px] max-w-full object-contain rounded-xl shadow-lg transition-transform duration-200" />
+            </div>
+
+            <!-- Mode 2: Signature Remini Split Slider -->
+            <div id="stage-split" class="hidden relative w-full h-[480px] cursor-ew-resize overflow-hidden flex items-center justify-center">
+              <!-- Before (Original) -->
+              <div class="absolute inset-0 flex items-center justify-center p-4">
+                <img id="img-split-orig" src="" alt="Before" class="max-h-full max-w-full object-contain pointer-events-none rounded-xl" />
+              </div>
+              <!-- After (Edited) -->
+              <div id="split-overlay" class="absolute inset-0 flex items-center justify-center p-4 overflow-hidden pointer-events-none" style="clip-path: inset(0 50% 0 0);">
+                <img id="img-split-edit" src="" alt="After" class="max-h-full max-w-full object-contain pointer-events-none rounded-xl" />
+              </div>
+
+              <!-- Floating Remini Badges -->
+              <div class="absolute top-4 left-4 pointer-events-none z-20">
+                <span class="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest bg-black/75 backdrop-blur-md text-white border border-white/20 shadow-md">
+                  Before
+                </span>
+              </div>
+              <div class="absolute top-4 right-4 pointer-events-none z-20">
+                <span class="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest bg-gradient-to-r from-pink-500 to-rose-600 text-white shadow-lg ring-1 ring-pink-300">
+                  After
+                </span>
+              </div>
+
+              <!-- Glowing Vertical Divider -->
+              <div id="split-divider" class="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_12px_rgba(236,72,153,0.9)] z-10 flex items-center justify-center pointer-events-none" style="left: 50%;">
+                <div class="w-10 h-10 rounded-full bg-black/80 backdrop-blur-md shadow-xl border-2 border-pink-400 flex items-center justify-center text-pink-300 text-xs font-bold">
+                  ◂ ▸
+                </div>
+              </div>
+            </div>
+
+            <!-- Mode 3: Side-by-Side -->
+            <div id="stage-compare" class="hidden w-full grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-black/40">
+              <div class="flex flex-col items-center">
+                <span class="text-xs font-bold text-zinc-300 mb-2 uppercase tracking-wider">Before (Original)</span>
+                <div class="w-full h-72 flex items-center justify-center bg-black/60 rounded-2xl border border-white/10 p-2 overflow-hidden">
+                  <img id="img-compare-orig" src="" alt="Before" class="max-h-full max-w-full object-contain rounded-lg" />
+                </div>
+              </div>
+              <div class="flex flex-col items-center">
+                <span id="label-compare-after" class="text-xs font-bold text-pink-400 mb-2 uppercase tracking-wider">After</span>
+                <div class="w-full h-72 flex items-center justify-center bg-black/60 rounded-2xl border border-pink-500/30 p-2 overflow-hidden">
+                  <img id="img-compare-edit" src="" alt="After" class="max-h-full max-w-full object-contain rounded-lg" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Hold for Before Button (Single Mode) -->
+            <button id="btn-hold-before" type="button" class="hidden absolute top-4 left-4 z-10 px-3.5 py-1.5 bg-black/75 backdrop-blur-md text-white text-xs font-semibold rounded-xl border border-white/20 shadow-lg active:scale-95">
+              👁️ Hold for Before
+            </button>
+          </div>
+
+          <!-- Bottom Actions -->
+          <div class="p-3 md:p-4 bg-black/60 border-t border-pink-500/15 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <button id="btn-use-as-input" type="button" onclick="useAsNextInput()" class="hidden px-3.5 py-2 bg-pink-500/20 hover:bg-pink-500/30 text-pink-200 font-semibold text-xs rounded-xl border border-pink-500/40 transition-all">
+                ✨ Use as Next Input
+              </button>
+              <button type="button" onclick="copyImage()" class="px-3.5 py-2 bg-white/5 hover:bg-white/10 text-zinc-300 font-semibold text-xs rounded-xl border border-white/10 transition-all">
+                📋 Copy
+              </button>
+            </div>
+            <button id="btn-download" type="button" onclick="downloadImage()" class="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-pink-600/30 active:scale-95 transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span>Download HD Result</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="mt-auto border-t border-pink-500/20 bg-[#13151f]/80 backdrop-blur-md py-4 text-center text-xs text-zinc-400">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <span class="text-pink-300 font-bold">Remini Studio • Standalone HTML Edition</span>
+      <span class="text-pink-400 font-semibold">100% Client-Side Engine • Zero API Keys</span>
+    </div>
+  </footer>
+
+  <!-- ======================================================== -->
+  <!-- JAVASCRIPT ENGINE (All Canvas Algorithms & Interaction) -->
+  <!-- ======================================================== -->
+  <script>
+    // State
+    let originalImage = null;
+    let currentImage = null;
+    let activeLabel = 'Original';
+    let currentRes = '';
+    let currentDim = '';
+    let versions = [];
+    let activeVersionId = '';
+    let currentMode = 'enhance';
+    let viewMode = 'single';
+    let isZoomed = false;
+    let sliderPercent = 50;
+
+    let selectedRestoreTone = 'restore-color';
+    let selectedToonStyle = 'studio-headshot';
+    let selectedShootStyle = 'golden-hour';
+    let targetUpscaleRes = '1080p';
+
+    let liveFilters = { grayscale: 0, sepia: 0, invert: 0, brightness: 100 };
+
+    // Toast
+    function showToast(msg, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const t = document.createElement('div');
+      t.className = `p-3.5 mb-2 rounded-2xl shadow-2xl border flex items-center gap-2.5 text-xs font-semibold backdrop-blur-xl ${
+        type === 'success' ? 'bg-[#13151f]/95 border-emerald-500/40 text-emerald-200' : 'bg-[#13151f]/95 border-rose-500/40 text-rose-200'
+      }`;
+      t.innerHTML = `<span>${type === 'success' ? '✅' : '⚠️'}</span><span>${msg}</span>`;
+      container.appendChild(t);
+      setTimeout(() => {
+        t.style.opacity = '0';
+        setTimeout(() => t.remove(), 300);
+      }, 4000);
+    }
+
+    // Load Image Helper
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        if (!src) return reject(new Error('Image is empty'));
+        const img = new Image();
+        if (src.startsWith('http')) img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Canvas image load error'));
+        img.src = src;
+      });
+    }
+
+    // Set Photo
+    function setPhoto(dataUrl, label = 'Original Photo') {
+      originalImage = dataUrl;
+      currentImage = dataUrl;
+      activeLabel = label;
+      currentRes = '';
+      currentDim = '';
+      liveFilters = { grayscale: 0, sepia: 0, invert: 0, brightness: 100 };
+      resetFilterInputs();
+
+      const newVer = {
+        id: 'ver-' + Date.now(),
+        label: label,
+        dataUrl: dataUrl,
+      };
+      versions = [newVer];
+      activeVersionId = newVer.id;
+
+      viewMode = 'single';
+      updateUI();
+      showToast(`Photo loaded: ${label}`);
+    }
+
+    function addVersion(dataUrl, label, res = '', dim = '') {
+      const newVer = {
+        id: 'ver-' + Date.now(),
+        label: label,
+        dataUrl: dataUrl,
+        res: res,
+        dim: dim
+      };
+      versions.push(newVer);
+      activeVersionId = newVer.id;
+      currentImage = dataUrl;
+      activeLabel = label;
+      currentRes = res;
+      currentDim = dim;
+      viewMode = 'split'; // Auto-trigger Remini split view
+      updateUI();
+    }
+
+    // Mode Switcher
+    function switchMode(mode) {
+      currentMode = mode;
+      const modes = ['enhance', 'restore', 'toon', 'photoshoot', 'tools'];
+      modes.forEach(m => {
+        const btn = document.getElementById(`tab-btn-${m}`);
+        const panel = document.getElementById(`mode-panel-${m}`);
+        if (m === mode) {
+          btn.className = 'py-2 px-1 rounded-2xl text-[11px] sm:text-xs font-bold bg-gradient-to-b from-pink-500 to-rose-600 text-white shadow-md ring-1 ring-pink-400';
+          panel.classList.remove('hidden');
+        } else {
+          btn.className = 'py-2 px-1 rounded-2xl text-[11px] sm:text-xs font-bold text-zinc-400 hover:text-white hover:bg-white/5';
+          panel.classList.add('hidden');
+        }
+      });
+    }
+
+    // View Mode (single, split, compare)
+    function setViewMode(vm) {
+      viewMode = vm;
+      const isSplit = vm === 'split';
+      const isCompare = vm === 'compare';
+      const isSingle = vm === 'single';
+
+      document.getElementById('stage-single').classList.toggle('hidden', !isSingle);
+      document.getElementById('stage-split').classList.toggle('hidden', !isSplit);
+      document.getElementById('stage-compare').classList.toggle('hidden', !isCompare);
+
+      document.getElementById('btn-mode-split').className = isSplit ? 'px-2.5 py-1 rounded-lg font-bold bg-gradient-to-r from-pink-500 to-rose-600 text-white' : 'px-2.5 py-1 rounded-lg font-bold text-zinc-400 hover:text-white';
+      document.getElementById('btn-mode-single').className = isSingle ? 'px-2.5 py-1 rounded-lg font-bold bg-gradient-to-r from-pink-500 to-rose-600 text-white' : 'px-2.5 py-1 rounded-lg font-bold text-zinc-400 hover:text-white';
+      document.getElementById('btn-mode-compare').className = isCompare ? 'px-2.5 py-1 rounded-lg font-bold bg-gradient-to-r from-pink-500 to-rose-600 text-white' : 'px-2.5 py-1 rounded-lg font-bold text-zinc-400 hover:text-white';
+      document.getElementById('btn-hold-before').classList.toggle('hidden', !isSingle || !originalImage || versions.length <= 1);
+    }
+
+    function toggleZoom() {
+      isZoomed = !isZoomed;
+      const zClass = isZoomed ? 'scale-150' : '';
+      document.getElementById('img-single').className = `max-h-[520px] max-w-full object-contain rounded-xl shadow-lg transition-transform duration-200 ${zClass}`;
+      document.getElementById('img-split-orig').className = `max-h-full max-w-full object-contain pointer-events-none rounded-xl transition-transform duration-200 ${zClass}`;
+      document.getElementById('img-split-edit').className = `max-h-full max-w-full object-contain pointer-events-none rounded-xl transition-transform duration-200 ${zClass}`;
+      document.getElementById('btn-zoom-toggle').className = isZoomed ? 'p-1.5 rounded-lg border bg-pink-500/30 border-pink-400 text-pink-200' : 'p-1.5 rounded-lg border bg-white/5 border-white/10 text-zinc-400 hover:text-white';
+    }
+
+    function setBackdrop(type) {
+      const vp = document.getElementById('stage-viewport');
+      vp.className = `relative w-full overflow-hidden flex items-center justify-center min-h-[360px] max-h-[580px] select-none ${
+        type === 'dark' ? 'bg-[#0b0c12]' : type === 'checker' ? 'checkerboard-bg' : type === 'white' ? 'bg-white' : 'bg-[#ffd6e0]'
+      }`;
+    }
+
+    // Split Slider Event Handler
+    const splitStage = document.getElementById('stage-split');
+    function updateSplitPosition(clientX) {
+      const rect = splitStage.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const pct = Math.max(0, Math.min(100, (x / rect.width) * 100));
+      sliderPercent = pct;
+      document.getElementById('split-overlay').style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+      document.getElementById('split-divider').style.left = `${pct}%`;
+    }
+    splitStage.addEventListener('mousemove', (e) => {
+      if (e.buttons === 1) updateSplitPosition(e.clientX);
+    });
+    splitStage.addEventListener('click', (e) => updateSplitPosition(e.clientX));
+    splitStage.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) updateSplitPosition(e.touches[0].clientX);
+    });
+
+    // Hold for Before
+    const holdBtn = document.getElementById('btn-hold-before');
+    holdBtn.addEventListener('mousedown', () => { if (originalImage) document.getElementById('img-single').src = originalImage; });
+    holdBtn.addEventListener('mouseup', () => { if (currentImage) document.getElementById('img-single').src = currentImage; });
+    holdBtn.addEventListener('touchstart', () => { if (originalImage) document.getElementById('img-single').src = originalImage; });
+    holdBtn.addEventListener('touchend', () => { if (currentImage) document.getElementById('img-single').src = currentImage; });
+
+    // UI State Sync
+    function updateUI() {
+      const hasImg = Boolean(currentImage);
+      document.getElementById('stage-empty').classList.toggle('hidden', hasImg);
+      document.getElementById('btn-reset-all').classList.toggle('hidden', !hasImg);
+
+      if (hasImg) {
+        document.getElementById('img-single').src = currentImage;
+        document.getElementById('img-split-orig').src = originalImage || currentImage;
+        document.getElementById('img-split-edit').src = currentImage;
+        document.getElementById('img-compare-orig').src = originalImage || currentImage;
+        document.getElementById('img-compare-edit').src = currentImage;
+        document.getElementById('label-compare-after').innerText = `After (${activeLabel})`;
+
+        document.getElementById('badge-active-label').innerText = activeLabel;
+        document.getElementById('badge-res').innerText = currentRes;
+        document.getElementById('badge-res').classList.toggle('hidden', !currentRes);
+        document.getElementById('badge-dim').innerText = currentDim;
+        document.getElementById('badge-dim').classList.toggle('hidden', !currentDim);
+
+        const hasMultiple = versions.length > 1;
+        document.getElementById('view-mode-bar').classList.toggle('hidden', !hasMultiple);
+        document.getElementById('version-box').classList.toggle('hidden', !hasMultiple);
+        document.getElementById('btn-use-as-input').classList.toggle('hidden', !hasMultiple);
+
+        setViewMode(viewMode);
+        renderVersionHistory();
+      }
+    }
+
+    function renderVersionHistory() {
+      const list = document.getElementById('version-list');
+      list.innerHTML = '';
+      versions.forEach((v, idx) => {
+        const isActive = v.id === activeVersionId;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.onclick = () => {
+          activeVersionId = v.id;
+          currentImage = v.dataUrl;
+          activeLabel = v.label;
+          currentRes = v.res || '';
+          currentDim = v.dim || '';
+          updateUI();
+        };
+        btn.className = `shrink-0 flex items-center gap-2 p-1.5 rounded-xl border text-left transition-all ${
+          isActive ? 'bg-pink-500/25 border-pink-400 ring-2 ring-pink-400/50' : 'bg-black/40 border-white/10'
+        }`;
+        btn.innerHTML = `
+          <div class="w-8 h-8 rounded-lg overflow-hidden bg-black/60 shrink-0 border border-white/10">
+            <img src="${v.dataUrl}" class="w-full h-full object-cover" />
+          </div>
+          <div class="pr-2 max-w-[110px]">
+            <div class="text-[11px] font-bold text-zinc-100 truncate">${v.label}</div>
+            <div class="text-[9px] text-pink-400">${v.res ? v.res + ' • ' : ''}v${idx + 1}</div>
+          </div>
+        `;
+        list.appendChild(btn);
+      });
+    }
+
+    function useAsNextInput() {
+      if (!currentImage) return;
+      originalImage = currentImage;
+      showToast('Current result set as next base input!');
+    }
+
+    // ==========================================
+    // CANVASES & ALGORITHMS (Client-Side Remini)
+    // ==========================================
+
+    // 1. Remini Enhance (Laplacian Unsharp Mask & Deblur)
+    function setEnhancePreset(s, d, cl, co) {
+      document.getElementById('slider-enhance-sharp').value = s;
+      document.getElementById('badge-enhance-sharp').innerText = s + '%';
+      document.getElementById('slider-enhance-deblur').value = d;
+      document.getElementById('badge-enhance-deblur').innerText = d + '%';
+      document.getElementById('slider-enhance-clarity').value = cl;
+      document.getElementById('badge-enhance-clarity').innerText = cl + '%';
+    }
+
+    async function runEnhance() {
+      if (!currentImage) return showToast('Please load a photo first', 'error');
+      const sVal = parseInt(document.getElementById('slider-enhance-sharp').value, 10);
+      const dVal = parseInt(document.getElementById('slider-enhance-deblur').value, 10);
+      const clVal = parseInt(document.getElementById('slider-enhance-clarity').value, 10);
+
+      const btn = document.getElementById('btn-run-enhance');
+      btn.innerText = '⚡ Enhancing Micro-Details...';
+      btn.disabled = true;
+
+      try {
+        const img = await loadImage(currentImage);
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+        const copy = new Uint8ClampedArray(d);
+
+        const sharpFactor = (sVal / 100) * 1.1 + (dVal / 100) * 0.7;
+        const contrastFactor = (259 * (40 * 0.8 + 255)) / (255 * (259 - 40 * 0.8));
+        const clarityWeight = (clVal / 100) * 0.35;
+
+        for (let y = 1; y < h - 1; y++) {
+          for (let x = 1; x < w - 1; x++) {
+            const idx = (y * w + x) * 4;
+            for (let c = 0; c < 3; c++) {
+              const val = copy[idx + c];
+              const up = copy[((y - 1) * w + x) * 4 + c];
+              const down = copy[((y + 1) * w + x) * 4 + c];
+              const left = copy[(y * w + (x - 1)) * 4 + c];
+              const right = copy[(y * w + (x + 1)) * 4 + c];
+              const localAvg = (up + down + left + right) / 4;
+              const highPass = val - localAvg;
+
+              let enhanced = val + highPass * sharpFactor;
+              if (val > 40 && val < 215) {
+                enhanced += ((val - 128) / 128) * (val * clarityWeight);
+              }
+              enhanced = contrastFactor * (enhanced - 128) + 128;
+              d[idx + c] = Math.min(255, Math.max(0, enhanced));
+            }
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+        addVersion(canvas.toDataURL('image/png'), 'HD Enhanced');
+        showToast('Photo enhanced! Drag slider to compare Before & After.');
+      } catch (e) {
+        showToast(e.message, 'error');
+      } finally {
+        btn.innerText = '⚡ Enhance & Fix Photo';
+        btn.disabled = false;
+      }
+    }
+
+    // 2. Remini Restore (Bilateral Denoise & Fade Recovery)
+    function selectRestoreTone(tone) {
+      selectedRestoreTone = tone;
+      document.querySelectorAll('.restore-tone-btn').forEach(b => {
+        const isMatch = b.getAttribute('data-tone') === tone;
+        b.className = isMatch
+          ? 'restore-tone-btn p-2.5 rounded-xl border bg-pink-500/25 border-pink-400 text-white text-left ring-1 ring-pink-400'
+          : 'restore-tone-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left';
+      });
+    }
+
+    async function runRestore() {
+      if (!currentImage) return showToast('Please load a photo first', 'error');
+      const denoiseVal = parseInt(document.getElementById('slider-restore-denoise').value, 10);
+      const fadeVal = parseInt(document.getElementById('slider-restore-fade').value, 10);
+
+      const btn = document.getElementById('btn-run-restore');
+      btn.innerText = '🕰️ Restoring Archival Photo...';
+      btn.disabled = true;
+
+      try {
+        const img = await loadImage(currentImage);
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+        const copy = new Uint8ClampedArray(d);
+
+        // Histogram stretch bounds
+        let minLum = 255, maxLum = 0;
+        const step = Math.max(1, Math.floor((w * h) / 10000));
+        for (let i = 0; i < d.length; i += 4 * step) {
+          const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          if (lum < minLum) minLum = lum;
+          if (lum > maxLum) maxLum = lum;
+        }
+        minLum = Math.max(0, minLum + (20 * (1 - fadeVal / 100)));
+        maxLum = Math.min(255, maxLum - (15 * (1 - fadeVal / 100)));
+        const lumRange = Math.max(10, maxLum - minLum);
+
+        const denoiseIntensity = denoiseVal / 100;
+
+        for (let y = 1; y < h - 1; y++) {
+          for (let x = 1; x < w - 1; x++) {
+            const idx = (y * w + x) * 4;
+            let r = copy[idx], g = copy[idx + 1], b = copy[idx + 2];
+
+            if (denoiseIntensity > 0) {
+              let rSum = 0, gSum = 0, bSum = 0, count = 0;
+              for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                  const nIdx = ((y + dy) * w + (x + dx)) * 4;
+                  const nr = copy[nIdx], ng = copy[nIdx + 1], nb = copy[nIdx + 2];
+                  if (Math.abs(r - nr) + Math.abs(g - ng) + Math.abs(b - nb) < 90) {
+                    rSum += nr; gSum += ng; bSum += nb; count++;
+                  }
+                }
+              }
+              if (count > 0) {
+                r = r * (1 - denoiseIntensity * 0.6) + (rSum / count) * (denoiseIntensity * 0.6);
+                g = g * (1 - denoiseIntensity * 0.6) + (gSum / count) * (denoiseIntensity * 0.6);
+                b = b * (1 - denoiseIntensity * 0.6) + (bSum / count) * (denoiseIntensity * 0.6);
+              }
+            }
+
+            r = Math.min(255, Math.max(0, ((r - minLum) / lumRange) * 255));
+            g = Math.min(255, Math.max(0, ((g - minLum) / lumRange) * 255));
+            b = Math.min(255, Math.max(0, ((b - minLum) / lumRange) * 255));
+
+            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+            if (selectedRestoreTone === 'clean-bw') {
+              d[idx] = lum; d[idx + 1] = lum; d[idx + 2] = lum;
+            } else if (selectedRestoreTone === 'vintage-sepia') {
+              d[idx] = Math.min(255, lum * 1.15 + 18);
+              d[idx + 1] = Math.min(255, lum * 0.95 + 10);
+              d[idx + 2] = Math.min(255, lum * 0.72);
+            } else if (selectedRestoreTone === 'polaroid') {
+              d[idx] = Math.min(255, r * 1.05 + 12);
+              d[idx + 1] = Math.min(255, g * 0.98 + 8);
+              d[idx + 2] = Math.min(255, b * 0.92 + 15);
+            } else {
+              const avg = (r + g + b) / 3;
+              d[idx] = Math.min(255, Math.max(0, avg + (r - avg) * 1.35));
+              d[idx + 1] = Math.min(255, Math.max(0, avg + (g - avg) * 1.3));
+              d[idx + 2] = Math.min(255, Math.max(0, avg + (b - avg) * 1.45));
+            }
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+        const label = selectedRestoreTone === 'clean-bw' ? 'Archival B&W' : selectedRestoreTone === 'vintage-sepia' ? 'Vintage Sepia' : selectedRestoreTone === 'polaroid' ? 'Polaroid Film' : 'Restored Color';
+        addVersion(canvas.toDataURL('image/png'), label);
+        showToast(`${label} restoration complete!`);
+      } catch (e) {
+        showToast(e.message, 'error');
+      } finally {
+        btn.innerText = '🕰️ Restore Old Photo';
+        btn.disabled = false;
+      }
+    }
+
+    // 3. Remini AI Toon & Headshot
+    function selectToonStyle(style) {
+      selectedToonStyle = style;
+      document.querySelectorAll('.toon-style-btn').forEach(b => {
+        const isMatch = b.getAttribute('data-toon') === style;
+        b.className = isMatch
+          ? 'toon-style-btn p-2.5 rounded-xl border bg-pink-500/25 border-pink-400 text-white text-left ring-1 ring-pink-400'
+          : 'toon-style-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left';
+      });
+    }
+
+    async function runToon() {
+      if (!currentImage) return showToast('Please load a photo first', 'error');
+      const intensity = parseInt(document.getElementById('slider-toon-intensity').value, 10);
+      const btn = document.getElementById('btn-run-toon');
+      btn.innerText = '🎭 Generating Portrait...';
+      btn.disabled = true;
+
+      try {
+        const img = await loadImage(currentImage);
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+        const copy = new Uint8ClampedArray(d);
+        const weight = intensity / 100;
+
+        if (selectedToonStyle === 'studio-headshot') {
+          for (let y = 1; y < h - 1; y++) {
+            for (let x = 1; x < w - 1; x++) {
+              const idx = (y * w + x) * 4;
+              const r = copy[idx], g = copy[idx + 1], b = copy[idx + 2];
+              const isSkin = r > 60 && g > 40 && b > 20 && r > g && r > b && (r - g) > 10;
+              if (isSkin) {
+                let rSum = 0, gSum = 0, bSum = 0;
+                for (let dy = -1; dy <= 1; dy++) {
+                  for (let dx = -1; dx <= 1; dx++) {
+                    const n = ((y + dy) * w + (x + dx)) * 4;
+                    rSum += copy[n]; gSum += copy[n + 1]; bSum += copy[n + 2];
+                  }
+                }
+                d[idx] = Math.min(255, (r * (1 - weight * 0.7) + (rSum / 9) * (weight * 0.7)) * 1.05 + 4);
+                d[idx + 1] = Math.min(255, (g * (1 - weight * 0.7) + (gSum / 9) * (weight * 0.7)) * 1.03 + 2);
+                d[idx + 2] = Math.min(255, (b * (1 - weight * 0.7) + (bSum / 9) * (weight * 0.7)) * 1.06 + 3);
+              } else {
+                const up = copy[((y - 1) * w + x) * 4], down = copy[((y + 1) * w + x) * 4];
+                const left = copy[(y * w + (x - 1)) * 4], right = copy[(y * w + (x + 1)) * 4];
+                const edge = 4 * r - (up + down + left + right);
+                d[idx] = Math.min(255, Math.max(0, r + edge * 0.3 * weight));
+                d[idx + 1] = Math.min(255, Math.max(0, g + edge * 0.3 * weight));
+                d[idx + 2] = Math.min(255, Math.max(0, b + edge * 0.3 * weight));
+              }
+            }
+          }
+        } else if (selectedToonStyle === 'toon-3d') {
+          for (let i = 0; i < d.length; i += 4) {
+            let r = Math.round(d[i] / 28) * 28;
+            let g = Math.round(d[i + 1] / 28) * 28;
+            let b = Math.round(d[i + 2] / 28) * 28;
+            const avg = (r + g + b) / 3;
+            d[i] = Math.min(255, Math.max(0, (avg + (r - avg) * 1.45) * 1.1 + 6));
+            d[i + 1] = Math.min(255, Math.max(0, (avg + (g - avg) * 1.4) * 1.05 + 4));
+            d[i + 2] = Math.min(255, Math.max(0, (avg + (b - avg) * 1.5) * 1.12 + 8));
+          }
+        } else if (selectedToonStyle === 'anime') {
+          for (let y = 1; y < h - 1; y++) {
+            for (let x = 1; x < w - 1; x++) {
+              const idx = (y * w + x) * 4;
+              let r = Math.floor(copy[idx] / 32) * 32 + 16;
+              let g = Math.floor(copy[idx + 1] / 32) * 32 + 16;
+              let b = Math.floor(copy[idx + 2] / 32) * 32 + 16;
+              const rLum = (copy[(y * w + x + 1) * 4] + copy[(y * w + x + 1) * 4 + 1] + copy[(y * w + x + 1) * 4 + 2]) / 3;
+              const dLum = (copy[((y + 1) * w + x) * 4] + copy[((y + 1) * w + x) * 4 + 1] + copy[((y + 1) * w + x) * 4 + 2]) / 3;
+              const cLum = (copy[idx] + copy[idx + 1] + copy[idx + 2]) / 3;
+              const edge = Math.abs(cLum - rLum) + Math.abs(cLum - dLum);
+              if (edge > 24) {
+                d[idx] = r * 0.25; d[idx + 1] = g * 0.25; d[idx + 2] = b * 0.35;
+              } else {
+                d[idx] = Math.min(255, r * 1.18 + 10);
+                d[idx + 1] = Math.min(255, g * 1.12 + 8);
+                d[idx + 2] = Math.min(255, b * 1.25 + 14);
+              }
+            }
+          }
+        } else if (selectedToonStyle === 'comic') {
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              const idx = (y * w + x) * 4;
+              const lum = (copy[idx] + copy[idx + 1] + copy[idx + 2]) / 3;
+              const dot = (x % 4 === 0 && y % 4 === 0) ? -25 : 0;
+              if (lum < 75) { d[idx] = 225 + dot; d[idx + 1] = 29 + dot; d[idx + 2] = 72 + dot; }
+              else if (lum < 155) { d[idx] = 249 + dot; d[idx + 1] = 115 + dot; d[idx + 2] = 22 + dot; }
+              else { d[idx] = 254 + dot; d[idx + 1] = 243 + dot; d[idx + 2] = 199 + dot; }
+            }
+          }
+        } else {
+          // Claymation
+          for (let i = 0; i < d.length; i += 4) {
+            d[i] = Math.min(255, Math.round(d[i] / 20) * 20);
+            d[i + 1] = Math.min(255, Math.round(d[i + 1] / 20) * 20);
+            d[i + 2] = Math.min(255, Math.round(d[i + 2] / 20) * 20);
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+        const lMap = { 'studio-headshot': 'Pro Headshot', 'toon-3d': '3D Pixar Toon', 'anime': 'Anime Character', 'comic': 'Pop Comic', 'clay': 'Claymation' };
+        addVersion(canvas.toDataURL('image/png'), lMap[selectedToonStyle] || 'AI Toon');
+        showToast('Portrait style applied!');
+      } catch (e) {
+        showToast(e.message, 'error');
+      } finally {
+        btn.innerText = '🎭 Generate AI Portrait';
+        btn.disabled = false;
+      }
+    }
+
+    // 4. Remini Photoshoot
+    function selectShootStyle(style) {
+      selectedShootStyle = style;
+      document.querySelectorAll('.shoot-style-btn').forEach(b => {
+        const isMatch = b.getAttribute('data-shoot') === style;
+        b.className = isMatch
+          ? 'shoot-style-btn p-2.5 rounded-xl border bg-pink-500/25 border-pink-400 text-white text-left ring-1 ring-pink-400'
+          : 'shoot-style-btn p-2.5 rounded-xl border bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 text-left';
+      });
+    }
+
+    async function runShoot() {
+      if (!currentImage) return showToast('Please load a photo first', 'error');
+      const strength = parseInt(document.getElementById('slider-shoot-strength').value, 10);
+      const btn = document.getElementById('btn-run-shoot');
+      btn.innerText = '📸 Applying Photoshoot...';
+      btn.disabled = true;
+
+      try {
+        const img = await loadImage(currentImage);
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+        const s = strength / 100;
+
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i], g = d[i + 1], b = d[i + 2];
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+          if (selectedShootStyle === 'golden-hour') {
+            d[i] = r * (1 - s) + Math.min(255, r * 1.25 + 25) * s;
+            d[i + 1] = g * (1 - s) + Math.min(255, g * 1.08 + 12) * s;
+            d[i + 2] = b * (1 - s) + Math.max(0, b * 0.78) * s;
+          } else if (selectedShootStyle === 'vogue-editorial') {
+            const cF = (259 * (45 * s + 255)) / (255 * (259 - 45 * s));
+            d[i] = r * (1 - s) + Math.min(255, Math.max(0, cF * (r - 128) + 128)) * s;
+            d[i + 1] = g * (1 - s) + Math.min(255, Math.max(0, cF * (g - 128) + 128)) * s;
+            d[i + 2] = b * (1 - s) + Math.min(255, Math.max(0, cF * (b - 128) + 128)) * s;
+          } else if (selectedShootStyle === 'cyberpunk-neon') {
+            if (lum < 128) {
+              d[i] = r * (1 - s) + Math.min(255, lum * 1.6 + 45) * s;
+              d[i + 1] = g * (1 - s) + Math.min(255, lum * 0.4) * s;
+              d[i + 2] = b * (1 - s) + Math.min(255, lum * 1.3 + 65) * s;
+            } else {
+              d[i] = r * (1 - s) + Math.min(255, lum * 0.5) * s;
+              d[i + 1] = g * (1 - s) + Math.min(255, lum * 1.25 + 35) * s;
+              d[i + 2] = b * (1 - s) + Math.min(255, lum * 1.5 + 45) * s;
+            }
+          } else if (selectedShootStyle === 'y2k-dream') {
+            const bloom = Math.max(0, lum - 150) * 0.45 * s;
+            d[i] = Math.min(255, r * (1 - s) + (r * 0.98 + 24 + bloom) * s);
+            d[i + 1] = Math.min(255, g * (1 - s) + (g * 0.96 + 20 + bloom) * s);
+            d[i + 2] = Math.min(255, b * (1 - s) + (b * 1.05 + 28 + bloom) * s);
+          } else {
+            // Portra
+            d[i] = r * (1 - s) + Math.min(255, r * 1.12 + 10) * s;
+            d[i + 1] = g * (1 - s) + Math.min(255, g * 1.04 + 6) * s;
+            d[i + 2] = b * (1 - s) + Math.max(0, b * 0.94 - 2) * s;
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+        const lMap = { 'golden-hour': 'Golden Hour', 'vogue-editorial': 'Vogue Editorial', 'cyberpunk-neon': 'Cyberpunk', 'y2k-dream': 'Y2K Dream', 'kodak-portra': 'Kodak Portra' };
+        addVersion(canvas.toDataURL('image/png'), lMap[selectedShootStyle] || 'Photoshoot');
+        showToast('Photoshoot lighting applied!');
+      } catch (e) {
+        showToast(e.message, 'error');
+      } finally {
+        btn.innerText = '📸 Apply Photoshoot Style';
+        btn.disabled = false;
+      }
+    }
+
+    // 5. Cutout Background
+    async function runCutout() {
+      if (!currentImage) return showToast('Please load a photo first', 'error');
+      const tol = parseInt(document.getElementById('slider-cutout-tol').value, 10);
+      try {
+        const img = await loadImage(currentImage);
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+
+        // Sample border bg colors
+        const pts = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1], [Math.floor(w / 2), 0]];
+        const bgCols = pts.map(([x, y]) => {
+          const idx = (y * w + x) * 4;
+          return [d[idx], d[idx + 1], d[idx + 2]];
+        });
+
+        const tolSq = tol * tol;
+        const fSq = (tol + 24) * (tol + 24);
+
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i], g = d[i + 1], b = d[i + 2];
+          let minSq = Infinity;
+          for (const [br, bg, bb] of bgCols) {
+            const dist = (r - br) ** 2 + (g - bg) ** 2 + (b - bb) ** 2;
+            if (dist < minSq) minSq = dist;
+          }
+          if (minSq < tolSq) {
+            d[i + 3] = 0;
+          } else if (minSq < fSq) {
+            const ratio = (Math.sqrt(minSq) - tol) / 24;
+            d[i + 3] = Math.round(Math.min(255, Math.max(0, ratio * 255)));
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+        addVersion(canvas.toDataURL('image/png'), 'Cutout Transparent');
+        showToast('Background removed cleanly with transparency!');
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    }
+
+    // 6. Live Filter Handlers
+    function onLiveFilterChange() {
+      liveFilters.grayscale = parseInt(document.getElementById('s-gray').value, 10);
+      liveFilters.sepia = parseInt(document.getElementById('s-sepia').value, 10);
+      liveFilters.invert = parseInt(document.getElementById('s-invert').value, 10);
+      liveFilters.brightness = parseInt(document.getElementById('s-bright').value, 10);
+
+      document.getElementById('b-gray').innerText = liveFilters.grayscale + '%';
+      document.getElementById('b-sepia').innerText = liveFilters.sepia + '%';
+      document.getElementById('b-invert').innerText = liveFilters.invert + '%';
+      document.getElementById('b-bright').innerText = liveFilters.brightness + '%';
+
+      const filterStr = `grayscale(${liveFilters.grayscale}%) sepia(${liveFilters.sepia}%) invert(${liveFilters.invert}%) brightness(${liveFilters.brightness}%)`;
+      document.getElementById('img-single').style.filter = filterStr;
+      document.getElementById('img-split-edit').style.filter = filterStr;
+      document.getElementById('img-compare-edit').style.filter = filterStr;
+
+      const active = liveFilters.grayscale > 0 || liveFilters.sepia > 0 || liveFilters.invert > 0 || liveFilters.brightness !== 100;
+      document.getElementById('btn-bake-filter').classList.toggle('hidden', !active);
+    }
+
+    function resetFilterInputs() {
+      ['s-gray', 's-sepia', 's-invert'].forEach(id => document.getElementById(id).value = 0);
+      document.getElementById('s-bright').value = 100;
+      onLiveFilterChange();
+    }
+    function resetFilters() {
+      resetFilterInputs();
+      showToast('Filters reset');
+    }
+
+    async function bakeFilterToVersion() {
+      if (!currentImage) return;
+      const filterStr = `grayscale(${liveFilters.grayscale}%) sepia(${liveFilters.sepia}%) invert(${liveFilters.invert}%) brightness(${liveFilters.brightness}%)`;
+      const img = await loadImage(currentImage);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.filter = filterStr;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      addVersion(canvas.toDataURL('image/png'), 'Filtered Photo');
+      resetFilterInputs();
+      showToast('Filter adjustments saved into photo!');
+    }
+
+    // 7. Resolution Upscaler
+    function selectRes(r) {
+      targetUpscaleRes = r;
+      document.getElementById('label-target-res').innerText = r;
+      document.querySelectorAll('.res-btn').forEach(b => {
+        const isMatch = b.getAttribute('data-res') === r;
+        b.className = isMatch
+          ? 'res-btn p-2 rounded-2xl border text-center transition-all bg-gradient-to-b from-pink-500 to-rose-600 text-white border-pink-400 shadow-lg ring-2 ring-pink-400/50'
+          : 'res-btn p-2 rounded-2xl border text-center transition-all bg-black/40 text-zinc-300 border-white/10';
+      });
+    }
+
+    async function runUpscale() {
+      if (!currentImage) return showToast('Please load a photo first', 'error');
+      const btn = document.getElementById('btn-run-upscale');
+      btn.innerText = `🚀 Upscaling to ${targetUpscaleRes}...`;
+      btn.disabled = true;
+
+      try {
+        const img = await loadImage(currentImage);
+        const origW = img.naturalWidth || img.width;
+        const origH = img.naturalHeight || img.height;
+        const aspect = origW / origH;
+
+        const dimMap = { '144p': 144, '480p': 480, '720p': 720, '1080p': 1080, '4K': 2160 };
+        const targetDim = dimMap[targetUpscaleRes] || 1080;
+
+        let targetW, targetH;
+        if (aspect >= 1) {
+          targetH = targetDim;
+          targetW = Math.round(targetDim * aspect);
+        } else {
+          targetW = targetDim;
+          targetH = Math.round(targetDim / aspect);
+        }
+        if (targetUpscaleRes === '4K' && targetW > 3840) {
+          targetW = 3840; targetH = Math.round(3840 / aspect);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW; canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, targetW, targetH);
+
+        // Multi-pass unsharp mask
+        if (targetUpscaleRes === '720p' || targetUpscaleRes === '1080p' || targetUpscaleRes === '4K') {
+          const imgData = ctx.getImageData(0, 0, targetW, targetH);
+          const d = imgData.data;
+          const copy = new Uint8ClampedArray(d);
+          const factor = targetUpscaleRes === '4K' ? 0.35 : 0.25;
+          for (let y = 1; y < targetH - 1; y++) {
+            for (let x = 1; x < targetW - 1; x++) {
+              const idx = (y * targetW + x) * 4;
+              for (let c = 0; c < 3; c++) {
+                const val = copy[idx + c];
+                const up = copy[((y - 1) * targetW + x) * 4 + c];
+                const down = copy[((y + 1) * targetW + x) * 4 + c];
+                const left = copy[(y * targetW + (x - 1)) * 4 + c];
+                const right = copy[(y * targetW + (x + 1)) * 4 + c];
+                const lap = 4 * val - (up + down + left + right);
+                d[idx + c] = Math.min(255, Math.max(0, val + lap * factor));
+              }
+            }
+          }
+          ctx.putImageData(imgData, 0, 0);
+        }
+
+        const dimText = `${targetW} × ${targetH} px`;
+        addVersion(canvas.toDataURL('image/png'), `${targetUpscaleRes} Upscaled`, targetUpscaleRes, dimText);
+        showToast(`Photo upscaled to ${targetUpscaleRes} (${dimText})!`);
+      } catch (e) {
+        showToast(e.message, 'error');
+      } finally {
+        btn.innerText = `🚀 Upscale to ${targetUpscaleRes}`;
+        btn.disabled = false;
+      }
+    }
+
+    // 8. Download & Copy
+    async function downloadImage() {
+      if (!currentImage) return;
+      const link = document.createElement('a');
+      link.href = currentImage;
+      link.download = `remini-${activeLabel.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('HD Image downloaded!');
+    }
+
+    async function copyImage() {
+      if (!currentImage) return;
+      try {
+        const res = await fetch(currentImage);
+        const blob = await res.blob();
+        await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+        showToast('Image copied to clipboard!');
+      } catch (err) {
+        await navigator.clipboard.writeText(currentImage);
+        showToast('Image data URL copied to clipboard!');
+      }
+    }
+
+    // 9. Procedural Sample Generators
+    function loadSample(type) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600; canvas.height = 600;
+      const ctx = canvas.getContext('2d');
+
+      if (type === 'blurry') {
+        // Blurry portrait sample for Enhance test
+        const grad = ctx.createLinearGradient(0, 0, 600, 600);
+        grad.addColorStop(0, '#2d1b33'); grad.addColorStop(1, '#0e0b16');
+        ctx.fillStyle = grad; ctx.fillRect(0, 0, 600, 600);
+        ctx.filter = 'blur(12px)';
+        // Head
+        ctx.fillStyle = '#ffdfbf'; ctx.beginPath(); ctx.arc(300, 270, 120, 0, Math.PI * 2); ctx.fill();
+        // Hair
+        ctx.fillStyle = '#3a1f1d'; ctx.beginPath(); ctx.arc(300, 230, 130, Math.PI, 0, false); ctx.fill();
+        // Eyes
+        ctx.fillStyle = '#221111'; ctx.beginPath(); ctx.arc(260, 260, 14, 0, Math.PI * 2); ctx.arc(340, 260, 14, 0, Math.PI * 2); ctx.fill();
+        // Lips
+        ctx.fillStyle = '#e06070'; ctx.beginPath(); ctx.ellipse(300, 320, 35, 12, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.filter = 'none';
+        setPhoto(canvas.toDataURL('image/png'), 'Blurry Portrait Sample');
+      } else if (type === 'vintage') {
+        // 1950s faded photo with scratches
+        ctx.fillStyle = '#d9c9a6'; ctx.fillRect(0, 0, 600, 600);
+        // Vignette
+        const vig = ctx.createRadialGradient(300, 300, 150, 300, 300, 350);
+        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(80,50,20,0.6)');
+        ctx.fillStyle = vig; ctx.fillRect(0, 0, 600, 600);
+        // Portrait silhouette
+        ctx.fillStyle = '#5c4832'; ctx.beginPath(); ctx.arc(300, 270, 110, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(300, 480, 180, 100, 0, 0, Math.PI * 2); ctx.fill();
+        // Film scratch lines
+        ctx.strokeStyle = '#f5ecd5'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(180, 0); ctx.lineTo(195, 600); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(420, 0); ctx.lineTo(410, 600); ctx.stroke();
+        setPhoto(canvas.toDataURL('image/png'), '1950s Vintage Photo');
+      } else if (type === 'portrait') {
+        // Clean Studio Model
+        const grad = ctx.createRadialGradient(300, 250, 50, 300, 300, 400);
+        grad.addColorStop(0, '#38203f'); grad.addColorStop(1, '#110b1a');
+        ctx.fillStyle = grad; ctx.fillRect(0, 0, 600, 600);
+        ctx.fillStyle = '#f7d3b5'; ctx.beginPath(); ctx.arc(300, 270, 115, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#1c1421'; ctx.beginPath(); ctx.arc(300, 220, 130, Math.PI * 0.9, Math.PI * 2.1); ctx.fill();
+        ctx.fillStyle = '#1c1421'; ctx.beginPath(); ctx.arc(260, 265, 10, 0, Math.PI * 2); ctx.arc(340, 265, 10, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#e64966'; ctx.beginPath(); ctx.ellipse(300, 325, 30, 10, 0, 0, Math.PI * 2); ctx.fill();
+        setPhoto(canvas.toDataURL('image/png'), 'Studio Portrait Model');
+      } else {
+        // Cherry Blossom
+        const grad = ctx.createLinearGradient(0, 0, 600, 600);
+        grad.addColorStop(0, '#fce7f3'); grad.addColorStop(1, '#f472b6');
+        ctx.fillStyle = grad; ctx.fillRect(0, 0, 600, 600);
+        for (let i = 0; i < 5; i++) {
+          const angle = (i * Math.PI * 2) / 5;
+          ctx.fillStyle = '#ffffff'; ctx.beginPath();
+          ctx.ellipse(300 + Math.cos(angle) * 70, 300 + Math.sin(angle) * 70, 45, 65, angle, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = '#fbcfe8'; ctx.beginPath(); ctx.arc(300, 300, 40, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#f43f5e'; ctx.beginPath(); ctx.arc(300, 300, 20, 0, Math.PI * 2); ctx.fill();
+        setPhoto(canvas.toDataURL('image/png'), 'Cherry Blossom');
+      }
+    }
+
+    // 10. File Drop & Select
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    document.getElementById('btn-select-file').onclick = () => fileInput.click();
+    dropZone.onclick = () => fileInput.click();
+
+    function handleFile(file) {
+      if (!file || !file.type.startsWith('image/')) return showToast('Please select a valid image file', 'error');
+      const reader = new FileReader();
+      reader.onload = (e) => setPhoto(e.target.result, file.name);
+      reader.onerror = () => showToast('Failed to read file', 'error');
+      reader.readAsDataURL(file);
+    }
+    fileInput.onchange = (e) => {
+      if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+    };
+    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-pink-500'); };
+    dropZone.ondragleave = () => dropZone.classList.remove('border-pink-500');
+    dropZone.ondrop = (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-pink-500');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    };
+
+    document.getElementById('btn-reset-all').onclick = () => {
+      originalImage = null; currentImage = null; versions = []; updateUI();
+    };
+  </script>
+</body>
+</html>
