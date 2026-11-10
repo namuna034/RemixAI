@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Upload, Image as ImageIcon, Sparkles, AlertCircle, Loader2, Zap } from 'lucide-react';
 import { SAMPLE_IMAGES, SampleImage } from '../sampleImages';
+import heic2any from 'heic2any';
 
 interface ImageUploaderProps {
   onImageSelected: (dataUrl: string, fileName?: string) => void;
@@ -19,15 +20,35 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [loadingSample, setLoadingSample] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const handleFile = (file: File | undefined | null) => {
+  const handleFile = async (file: File | undefined | null) => {
     setUploadError(null);
     if (!file) return;
 
+    let processedFile = file;
+
+    // Check for HEIC/HEIF and convert to JPEG automatically
+    const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || /\.(heic|heif)$/i.test(file.name);
+    if (isHeic) {
+      try {
+        const convertedBlob = await heic2any({
+          blob: file,
+          toType: 'image/jpeg',
+          quality: 0.85,
+        });
+        const blobToUse = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+        processedFile = new File([blobToUse], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+          type: 'image/jpeg',
+        });
+      } catch (err) {
+        console.error('HEIC conversion error:', err);
+      }
+    }
+
     // Check if it's an image
-    const isImageMime = file.type.startsWith('image/');
-    const isImageExt = /\.(jpe?g|png|webp|gif|bmp|svg|avif)$/i.test(file.name);
+    const isImageMime = processedFile.type.startsWith('image/');
+    const isImageExt = /\.(jpe?g|png|webp|gif|bmp|svg|avif|heic|heif)$/i.test(processedFile.name);
     if (!isImageMime && !isImageExt) {
-      const msg = `Selected file "${file.name}" is not a supported image. Please select a JPG, PNG, WebP, GIF, or BMP photo.`;
+      const msg = `Selected file "${processedFile.name}" is not a supported image. Please select a JPG, PNG, WebP, GIF, or BMP photo.`;
       setUploadError(msg);
       alert(msg);
       return;
@@ -35,8 +56,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
     // Limit size to 30MB
     const maxSizeBytes = 30 * 1024 * 1024;
-    if (file.size > maxSizeBytes) {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    if (processedFile.size > maxSizeBytes) {
+      const sizeMB = (processedFile.size / (1024 * 1024)).toFixed(1);
       const msg = `File is too large (${sizeMB} MB). Maximum allowed size is 30 MB.`;
       setUploadError(msg);
       alert(msg);
@@ -60,11 +81,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       testImg.onload = () => {
         setIsReading(false);
         setUploadError(null);
-        onImageSelected(result, file.name);
+        onImageSelected(result, processedFile.name);
       };
       testImg.onerror = () => {
         setIsReading(false);
-        const msg = `Could not decode image "${file.name}". The file may be corrupted or in an unsupported format.`;
+        const msg = `Could not decode image "${processedFile.name}". The file may be corrupted or in an unsupported format.`;
         setUploadError(msg);
         alert(msg);
       };
@@ -84,7 +105,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       setUploadError('Image read was cancelled.');
     };
 
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(processedFile);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -133,7 +154,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.heic,.heif"
         className="hidden"
         onChange={(e) => {
           if (e.target.files && e.target.files.length > 0) {
@@ -191,7 +212,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                 : 'Upload Photo to Enhance'}
             </h3>
             <p className="text-xs text-zinc-400 mt-1">
-              Select or drop a blurry, vintage, or portrait photo (JPG, PNG, WebP)
+              Select or drop a blurry, vintage, or portrait photo (JPG, PNG, WebP, HEIC)
             </p>
           </div>
 
